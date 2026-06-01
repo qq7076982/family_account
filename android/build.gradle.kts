@@ -16,36 +16,30 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-gradle.buildStarted { settings ->
+val knownNamespaces = mapOf(
+    "cloudbase_ce" to "com.cloudbase.cloudbase_ce",
+    "jni" to "com.github.dart_lang.jni"
+)
+
+gradle.buildStarted { _ ->
     val pubCache = System.getenv("PUB_CACHE")
         ?: (System.getProperty("user.home") + "/.pub-cache")
     val cacheDir = file(pubCache).resolve("hosted/pub.dev")
 
-    // Packages needing namespace + compileSdk patches
-    listOf("cloudbase_ce", "jni").forEach { pkg ->
+    for ((pkg, ns) in knownNamespaces) {
         val pkgDir = cacheDir.listFiles()?.find {
             it.isDirectory && it.name.startsWith("${pkg}-")
-        } ?: return@forEach
+        } ?: continue
 
         val buildFile = pkgDir.resolve("android/build.gradle")
-        if (!buildFile.exists()) return@forEach
+        if (!buildFile.exists()) continue
 
         var content = buildFile.readText()
         var modified = false
 
         if (!content.contains("namespace")) {
-            val manifest = pkgDir.resolve("android/src/main/AndroidManifest.xml")
-            if (manifest.exists()) {
-                val matcher = Regex("""package="([^"]+)"""").find(manifest.readText())
-                val pkgName = matcher?.groupValues?.get(1)
-                if (!pkgName.isNullOrEmpty()) {
-                    content = content.replaceFirst(
-                        "android {",
-                        "android {\n    namespace '$pkgName'"
-                    )
-                    modified = true
-                }
-            }
+            content = content.replaceFirst("android {", "android {\n    namespace '$ns'")
+            modified = true
         }
 
         val sdkMatcher = Regex("""compileSdkVersion\s+(\d+)""").find(content)
@@ -59,7 +53,7 @@ gradle.buildStarted { settings ->
 
         if (modified) {
             buildFile.writeText(content)
-            println("[family_account] buildStarted: patched ${pkg} build.gradle")
+            println("[family_account] Patched ${pkg}: namespace='$ns', compileSdk=30")
         }
     }
 }

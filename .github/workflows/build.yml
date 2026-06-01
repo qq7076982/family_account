@@ -25,19 +25,37 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Patch cloudbase_ce in pub-cache
+        run: |
+          PUB_CACHE="${HOME}/.pub-cache"
+          CLOUD_DIR=$(find "${PUB_CACHE}/hosted/pub.dev" -maxdepth 1 -type d -name "cloudbase_ce-*" | head -1)
+          if [ -d "$CLOUD_DIR/android" ]; then
+            BUILD_FILE="$CLOUD_DIR/android/build.gradle"
+            if [ -f "$BUILD_FILE" ]; then
+              # Inject namespace if missing
+              if ! grep -q "namespace" "$BUILD_FILE"; then
+                PKG=$(grep 'package="' "$CLOUD_DIR/android/src/main/AndroidManifest.xml" | sed 's/.*package="\([^"]*\)".*/\1/')
+                echo "Injecting namespace '$PKG' into cloudbase_ce"
+                sed -i "s/android {/android {\n    namespace '$PKG'/" "$BUILD_FILE"
+              fi
+              # Upgrade compileSdkVersion if too low
+              if grep -q "compileSdkVersion [0-9]\+" "$BUILD_FILE"; then
+                CURRENT_SDK=$(grep "compileSdkVersion" "$BUILD_FILE" | grep -o "[0-9]\+")
+                if [ "$CURRENT_SDK" -lt 30 ]; then
+                  echo "Upgrading compileSdkVersion $CURRENT_SDK -> 30"
+                  sed -i "s/compileSdkVersion $CURRENT_SDK/compileSdkVersion 30/" "$BUILD_FILE"
+                fi
+              fi
+              echo "=== Patched build.gradle ==="
+              cat "$BUILD_FILE"
+            fi
+          fi
+
       - name: Install dependencies
         run: flutter pub get
 
       - name: Build debug APK
-        run: |
-          echo '=== Start Build ===' 
-          flutter build apk --debug 2>&1
-          BUILD_EXIT=$?
-          echo '=== Build exit code:' $BUILD_EXIT
-          echo '=== Build output ==='
-          ls -la build/app/outputs/flutter-apk/ 2>/dev/null || echo 'No APK dir'
-          ls -la build/app/outputs/ 2>/dev/null || echo 'No outputs dir'
-          exit $BUILD_EXIT
+        run: flutter build apk --debug
         timeout-minutes: 20
 
       - name: Upload artifact
