@@ -16,15 +16,6 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-androidComponents {
-    beforeVariants(selector().all()) { variant ->
-        val sdk = variant.compileSdkVersion.orEmpty().toIntOrNull() ?: 0
-        if (sdk < 30) {
-            variant.compileSdkVersion = "30"
-        }
-    }
-}
-
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
