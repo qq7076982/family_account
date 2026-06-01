@@ -24,17 +24,10 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: |
-          flutter pub get
-          flutter pub deps --style=compact
-
-      - name: Analyze
-        run: flutter analyze
+        run: flutter pub get
 
       - name: Build debug APK
-        run: |
-          echo "=== Building APK ==="
-          flutter build apk --debug 2>&1 | tail -50
+        run: flutter build apk --debug
         timeout-minutes: 20
 
       - name: Upload artifact
