@@ -24,16 +24,21 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          flutter pub deps --style=compact
+
+      - name: Analyze
+        run: flutter analyze
 
       - name: Build debug APK
         run: |
-          flutter clean
-          flutter pub get
-          flutter build apk --debug -v
+          echo "=== Building APK ==="
+          flutter build apk --debug 2>&1 | tail -50
         timeout-minutes: 20
 
       - name: Upload artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug.apk
