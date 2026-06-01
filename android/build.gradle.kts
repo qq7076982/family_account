@@ -16,40 +16,30 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-// Downgrade AGP to 8.x for compatibility with older plugins
-gradle.settingsEvaluated {
-    // Override android.gradle.plugin.version via command line or extra properties
-}
-
-// Apply namespace/compileSdk patches to pub-cache plugin build files
-gradle.projectsLoaded {
+gradle.buildStarted { settings ->
     val pubCache = System.getenv("PUB_CACHE")
         ?: (System.getProperty("user.home") + "/.pub-cache")
     val cacheDir = file(pubCache).resolve("hosted/pub.dev")
 
     // Packages needing namespace + compileSdk patches
-    val patches = listOf("cloudbase_ce", "jni")
-    for (pkg in patches) {
+    listOf("cloudbase_ce", "jni").forEach { pkg ->
         val pkgDir = cacheDir.listFiles()?.find {
             it.isDirectory && it.name.startsWith("${pkg}-")
-        } ?: continue
+        } ?: return@forEach
 
         val buildFile = pkgDir.resolve("android/build.gradle")
-        if (!buildFile.exists()) continue
+        if (!buildFile.exists()) return@forEach
 
         var content = buildFile.readText()
         var modified = false
 
-        // 1) Add namespace if missing
         if (!content.contains("namespace")) {
-            // Read package from AndroidManifest.xml
             val manifest = pkgDir.resolve("android/src/main/AndroidManifest.xml")
             if (manifest.exists()) {
-                val manifestContent = manifest.readText()
-                val matcher = Regex("""package="([^"]+)"""").find(manifestContent)
+                val matcher = Regex("""package="([^"]+)"""").find(manifest.readText())
                 val pkgName = matcher?.groupValues?.get(1)
                 if (!pkgName.isNullOrEmpty()) {
-                    content = content.replaceAfterLast(
+                    content = content.replaceFirst(
                         "android {",
                         "android {\n    namespace '$pkgName'"
                     )
@@ -58,7 +48,6 @@ gradle.projectsLoaded {
             }
         }
 
-        // 2) Upgrade compileSdkVersion if too low
         val sdkMatcher = Regex("""compileSdkVersion\s+(\d+)""").find(content)
         if (sdkMatcher != null) {
             val currentSdk = sdkMatcher.groupValues[1].toIntOrNull() ?: 0
@@ -70,7 +59,7 @@ gradle.projectsLoaded {
 
         if (modified) {
             buildFile.writeText(content)
-            println("[family_account] Patched ${pkg} build.gradle in pub-cache")
+            println("[family_account] buildStarted: patched ${pkg} build.gradle")
         }
     }
 }
