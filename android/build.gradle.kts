@@ -30,17 +30,12 @@ subprojects {
         if (project.hasProperty("android")) {
             val android = project.property("android")
             if (android is com.android.build.gradle.LibraryExtension) {
-                // Inject namespace if missing
-                if (android.namespace == null) {
-                    android.namespace = knownNamespaces[project.name]
+                if (android.namespace.isNullOrEmpty()) {
+                    val ns = knownNamespaces[project.name]
                         ?: project.group?.toString()
                         ?: "auto.${project.name.replace("-", "_")}"
-                    println("[family_account] Set namespace '${android.namespace}' for ${project.name}")
-                }
-                // Override compileSdk to at least 30 (required for Java 9+)
-                if (android.compileSdkVersion < 30) {
-                    android.compileSdkVersion = 30
-                    println("[family_account] Upgraded compileSdkVersion to 30 for ${project.name}")
+                    android.namespace = ns
+                    println("[family_account] Set namespace '$ns' for ${project.name}")
                 }
             }
         }
