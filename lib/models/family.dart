@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Family {
   final String id;
   final String name;
@@ -15,22 +13,21 @@ class Family {
     this.monthlyBudget = 0,
   });
 
-  factory Family.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory Family.fromMap(Map<String, dynamic> data, String id) {
     return Family(
-      id: doc.id,
+      id: id,
       name: data['name'] ?? '',
       creatorId: data['creatorId'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] ?? 0),
       monthlyBudget: (data['monthlyBudget'] ?? 0).toDouble(),
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     return {
       'name': name,
       'creatorId': creatorId,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.millisecondsSinceEpoch,
       'monthlyBudget': monthlyBudget,
     };
   }

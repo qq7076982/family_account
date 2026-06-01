@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum BillType { income, expense }
 enum PayType { husband, wife, shared }
 
@@ -30,30 +28,32 @@ class Bill {
     required this.createdAt,
   });
 
-  factory Bill.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory Bill.fromMap(Map<String, dynamic> data, String id) {
+    final typeStr = data['type'] as String? ?? 'expense';
+    final payTypeStr = data['payType'] as String? ?? 'shared';
+
     return Bill(
-      id: doc.id,
+      id: id,
       familyId: data['familyId'] ?? '',
-      type: data['type'] == 'income' ? BillType.income : BillType.expense,
+      type: typeStr == 'income' ? BillType.income : BillType.expense,
       amount: (data['amount'] ?? 0).toDouble(),
       category: data['category'] ?? '',
-      payType: _parsePayType(data['payType']),
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      payType: _parsePayType(payTypeStr),
+      date: DateTime.fromMillisecondsSinceEpoch(data['date'] ?? 0),
       note: data['note'],
       creatorId: data['creatorId'] ?? '',
       isSettled: data['isSettled'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] ?? 0),
     );
   }
 
-  static PayType _parsePayType(String? val) {
+  static PayType _parsePayType(String val) {
     if (val == 'husband') return PayType.husband;
     if (val == 'wife') return PayType.wife;
     return PayType.shared;
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     String payTypeStr = 'shared';
     if (payType == PayType.husband) payTypeStr = 'husband';
     if (payType == PayType.wife) payTypeStr = 'wife';
@@ -64,11 +64,11 @@ class Bill {
       'amount': amount,
       'category': category,
       'payType': payTypeStr,
-      'date': Timestamp.fromDate(date),
+      'date': date.millisecondsSinceEpoch,
       'note': note,
       'creatorId': creatorId,
       'isSettled': isSettled,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.millisecondsSinceEpoch,
     };
   }
 

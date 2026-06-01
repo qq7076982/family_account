@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Category {
   final String id;
   final String name;
@@ -15,10 +13,9 @@ class Category {
     this.isExpense = true,
   });
 
-  factory Category.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory Category.fromMap(Map<String, dynamic> data, String id) {
     return Category(
-      id: doc.id,
+      id: id,
       name: data['name'] ?? '',
       icon: data['icon'] ?? '📦',
       isDefault: data['isDefault'] ?? false,
@@ -26,7 +23,7 @@ class Category {
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     return {
       'name': name,
       'icon': icon,
@@ -37,7 +34,6 @@ class Category {
 
   static List<Category> defaultCategories() {
     return [
-      // 支出分类
       Category(id: 'meal', name: '餐饮', icon: '🍜', isDefault: true, isExpense: true),
       Category(id: 'housing', name: '住房', icon: '🏠', isDefault: true, isExpense: true),
       Category(id: 'transport', name: '交通', icon: '🚗', isDefault: true, isExpense: true),
@@ -47,7 +43,6 @@ class Category {
       Category(id: 'childcare', name: '育儿', icon: '👶', isDefault: true, isExpense: true),
       Category(id: 'entertainment', name: '娱乐', icon: '🎮', isDefault: true, isExpense: true),
       Category(id: 'other_exp', name: '其他', icon: '📦', isDefault: true, isExpense: true),
-      // 收入分类
       Category(id: 'salary', name: '工资', icon: '💰', isDefault: true, isExpense: false),
       Category(id: 'bonus', name: '奖金', icon: '🎉', isDefault: true, isExpense: false),
       Category(id: 'red_packet', name: '红包', icon: '🧧', isDefault: true, isExpense: false),

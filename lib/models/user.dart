@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum Gender { husband, wife }
 
 class AppUser {
@@ -19,25 +17,24 @@ class AppUser {
     required this.createdAt,
   });
 
-  factory AppUser.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory AppUser.fromMap(Map<String, dynamic> data, String id) {
     return AppUser(
-      id: doc.id,
+      id: id,
       name: data['name'] ?? '',
       avatarUrl: data['avatarUrl'],
       gender: data['gender'] == 'husband' ? Gender.husband : Gender.wife,
       familyId: data['familyId'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] ?? 0),
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     return {
       'name': name,
       'avatarUrl': avatarUrl,
       'gender': gender == Gender.husband ? 'husband' : 'wife',
       'familyId': familyId,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.millisecondsSinceEpoch,
     };
   }
 

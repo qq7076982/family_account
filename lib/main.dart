@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'providers/auth_provider.dart';
 import 'providers/bill_provider.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_navigator.dart';
-import 'services/firestore_service.dart';
+import 'services/cloudbase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await FirestoreService.getInstance(); // warm up Firebase
+  // 初始化腾讯云开发 CloudBase
+  await CloudBaseService.getInstance();
   runApp(const FamilyAccountApp());
 }
 

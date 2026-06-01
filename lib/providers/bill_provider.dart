@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
+import 'package:cloudbase_ce/cloudbase_ce.dart';
 import '../models/bill.dart';
 import '../models/settlement.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
-import '../services/firestore_service.dart';
+import '../services/cloudbase_service.dart';
 
 class BillProvider extends ChangeNotifier {
   List<Bill> _bills = [];
@@ -27,34 +27,54 @@ class BillProvider extends ChangeNotifier {
       _categories.where((c) => !c.isExpense).toList();
 
   Future<void> watchBills(String familyId) async {
-    final fs = await FirestoreService.getInstance();
-    fs.watchBills(familyId).listen((snap) {
-      _bills = snap.docs.map((d) => Bill.fromFirestore(d)).toList();
+    final cs = await CloudBaseService.getInstance();
+    cs.watchBills(familyId).onChange = (Snapshot snapshot) {
+      final List docs = snapshot.docs;
+      _bills = docs.whereType<Map>().map((d) {
+        final map = Map<String, dynamic>.from(d);
+        final id = map.remove('_id') ?? map.remove('id') ?? '';
+        return Bill.fromMap(map, id.toString());
+      }).toList();
       notifyListeners();
-    });
+    };
   }
 
   Future<void> watchSettlements(String familyId) async {
-    final fs = await FirestoreService.getInstance();
-    fs.watchSettlements(familyId).listen((snap) {
-      _settlements = snap.docs.map((d) => Settlement.fromFirestore(d)).toList();
+    final cs = await CloudBaseService.getInstance();
+    cs.watchSettlements(familyId).onChange = (Snapshot snapshot) {
+      final List docs = snapshot.docs;
+      _settlements = docs.whereType<Map>().map((d) {
+        final map = Map<String, dynamic>.from(d);
+        final id = map.remove('_id') ?? map.remove('id') ?? '';
+        return Settlement.fromMap(map, id.toString());
+      }).toList();
       notifyListeners();
-    });
+    };
   }
 
   Future<void> watchCategories(String familyId) async {
-    final fs = await FirestoreService.getInstance();
-    fs.watchCategories(familyId).listen((snap) {
-      _categories = snap.docs.map((d) => Category.fromFirestore(d)).toList();
+    final cs = await CloudBaseService.getInstance();
+    cs.watchCategories(familyId).onChange = (Snapshot snapshot) {
+      final List docs = snapshot.docs;
+      _categories = docs.whereType<Map>().map((d) {
+        final map = Map<String, dynamic>.from(d);
+        final id = map.remove('_id') ?? map.remove('id') ?? '';
+        return Category.fromMap(map, id.toString());
+      }).toList();
       notifyListeners();
-    });
+    };
   }
 
   Future<void> loadMonthlyBills(String familyId, int year, int month) async {
     _loading = true;
     notifyListeners();
-    final fs = await FirestoreService.getInstance();
-    _monthlyBills = await fs.getBillsByMonth(familyId, year, month);
+    final cs = await CloudBaseService.getInstance();
+    final raw = await cs.getBillsByMonth(familyId, year, month);
+    _monthlyBills = raw.map((d) {
+      final map = Map<String, dynamic>.from(d);
+      final id = map.remove('_id') ?? '';
+      return Bill.fromMap(map, id.toString());
+    }).toList();
     _loading = false;
     notifyListeners();
   }
@@ -69,30 +89,34 @@ class BillProvider extends ChangeNotifier {
     String? note,
     required String creatorId,
   }) async {
-    final fs = await FirestoreService.getInstance();
-    final bill = Bill(
-      id: const Uuid().v4(),
-      familyId: familyId,
-      type: type,
-      amount: amount,
-      category: category,
-      payType: payType,
-      date: date,
-      note: note,
-      creatorId: creatorId,
-      createdAt: DateTime.now(),
-    );
-    return await fs.addBill(bill);
+    final cs = await CloudBaseService.getInstance();
+    String payTypeStr = 'shared';
+    if (payType == PayType.husband) payTypeStr = 'husband';
+    if (payType == PayType.wife) payTypeStr = 'wife';
+
+    final data = {
+      'familyId': familyId,
+      'type': type == BillType.income ? 'income' : 'expense',
+      'amount': amount,
+      'category': category,
+      'payType': payTypeStr,
+      'date': date.millisecondsSinceEpoch,
+      'note': note,
+      'creatorId': creatorId,
+      'isSettled': false,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+    };
+    return await cs.addBill(data);
   }
 
   Future<void> updateBill(String billId, Map<String, dynamic> data) async {
-    final fs = await FirestoreService.getInstance();
-    await fs.updateBill(billId, data);
+    final cs = await CloudBaseService.getInstance();
+    await cs.updateBill(billId, data);
   }
 
   Future<void> deleteBill(String billId) async {
-    final fs = await FirestoreService.getInstance();
-    await fs.deleteBill(billId);
+    final cs = await CloudBaseService.getInstance();
+    await cs.deleteBill(billId);
   }
 
   Future<void> addSettlement({
@@ -103,24 +127,29 @@ class BillProvider extends ChangeNotifier {
     DateTime? date,
     String? note,
   }) async {
-    final fs = await FirestoreService.getInstance();
-    final settlement = Settlement(
-      id: const Uuid().v4(),
-      familyId: familyId,
-      amount: amount,
-      fromUserId: fromUserId,
-      toUserId: toUserId,
-      date: date ?? DateTime.now(),
-      note: note,
-      createdAt: DateTime.now(),
-    );
-    await fs.addSettlement(settlement);
+    final cs = await CloudBaseService.getInstance();
+    await cs.addSettlement({
+      'familyId': familyId,
+      'amount': amount,
+      'fromUserId': fromUserId,
+      'toUserId': toUserId,
+      'date': (date ?? DateTime.now()).millisecondsSinceEpoch,
+      'note': note,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   Future<void> setBudget(String familyId, double totalBudget,
       Map<String, double> categoryBudgets, int month, int year) async {
-    final fs = await FirestoreService.getInstance();
-    final budget = Budget(
+    final cs = await CloudBaseService.getInstance();
+    await cs.setBudget({
+      'familyId': familyId,
+      'totalBudget': totalBudget,
+      'categoryBudgets': categoryBudgets,
+      'month': month,
+      'year': year,
+    });
+    _budget = Budget(
       id: '${familyId}_${year}_$month',
       familyId: familyId,
       totalBudget: totalBudget,
@@ -128,24 +157,24 @@ class BillProvider extends ChangeNotifier {
       month: month,
       year: year,
     );
-    await fs.setBudget(budget);
-    _budget = budget;
     notifyListeners();
   }
 
   Future<void> loadBudget(String familyId, int month, int year) async {
-    final fs = await FirestoreService.getInstance();
-    _budget = await fs.getBudget(familyId, month, year);
+    final cs = await CloudBaseService.getInstance();
+    final raw = await cs.getBudget(familyId, month, year);
+    if (raw != null) {
+      _budget = Budget.fromMap(raw, '${familyId}_${year}_$month');
+    }
     notifyListeners();
   }
 
   Future<void> addCategory(
       String familyId, String name, String icon, bool isExpense) async {
-    final fs = await FirestoreService.getInstance();
-    await fs.addCategory(familyId, name, icon, isExpense);
+    final cs = await CloudBaseService.getInstance();
+    await cs.addCategory(familyId, name, icon, isExpense);
   }
 
-  // ========== 统计数据 ==========
   double getTotalExpense() {
     double total = 0.0;
     for (final bill in _monthlyBills) {

@@ -20,13 +20,16 @@ class Budget {
       id: id,
       familyId: data['familyId'] ?? '',
       totalBudget: (data['totalBudget'] ?? 0).toDouble(),
-      categoryBudgets: Map<String, double>.from(data['categoryBudgets'] ?? {}),
+      categoryBudgets: Map<String, double>.from(
+        (data['categoryBudgets'] as Map<String, dynamic>? ?? {})
+            .map((k, v) => MapEntry(k, (v as num).toDouble())),
+      ),
       month: data['month'] ?? DateTime.now().month,
       year: data['year'] ?? DateTime.now().year,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     return {
       'familyId': familyId,
       'totalBudget': totalBudget,

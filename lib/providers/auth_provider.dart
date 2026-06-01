@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+import '../services/cloud_auth_service.dart';
+import '../services/cloudbase_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   AppUser? _user;
@@ -16,20 +16,14 @@ class AuthProvider extends ChangeNotifier {
     _loading = true;
     notifyListeners();
 
-    final uid = AuthService.getCurrentUid();
+    final cs = await CloudBaseService.getInstance();
+    await CloudAuthService.init(cs.auth);
+
+    final uid = await CloudAuthService.getCurrentUid();
     if (uid != null) {
-      final data = await FirestoreService.getInstance().then((s) => s.getUser(uid));
+      final data = await cs.getUser(uid);
       if (data != null) {
-        _user = AppUser(
-          id: uid,
-          name: data['name'] ?? '',
-          avatarUrl: data['avatarUrl'],
-          gender: data['gender'] == 'husband'
-              ? Gender.husband
-              : Gender.wife,
-          familyId: data['familyId'],
-          createdAt: DateTime.now(),
-        );
+        _user = AppUser.fromMap(data, uid);
       }
     }
 
@@ -38,84 +32,70 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signInAnon() async {
-    final uid = await AuthService.signInAnonymously();
-    await FirestoreService.getInstance().then((s) => s.createUser(uid, '用户', 'husband'));
-    _user = AppUser(
-      id: uid,
-      name: '用户',
-      gender: Gender.husband,
-      createdAt: DateTime.now(),
-    );
-    notifyListeners();
-  }
-
-  Future<void> createFamilyAndJoin(String familyName, String myName, String myGender) async {
-    final fs = await FirestoreService.getInstance();
-    final uid = AuthService.getCurrentUid()!;
-
-    // 创建账本
-    final familyId = await fs.createFamily(familyName, uid);
-
-    // 更新用户信息
-    await fs.createUser(uid, myName, myGender);
-    await fs.updateUserFamily(uid, familyId);
-
-    // 初始化默认分类
-    await fs.initDefaultCategories(familyId);
-
-    // 重新加载用户
-    final data = await fs.getUser(uid);
-    _user = AppUser(
-      id: uid,
-      name: myName,
-      avatarUrl: null,
-      gender: myGender == 'husband' ? Gender.husband : Gender.wife,
-      familyId: familyId,
-      createdAt: DateTime.now(),
-    );
-    notifyListeners();
-  }
-
-  Future<String> joinFamily(String familyId, String myName, String myGender) async {
-    final fs = await FirestoreService.getInstance();
-    final uid = AuthService.getCurrentUid()!;
-
-    await fs.createUser(uid, myName, myGender);
-    await fs.updateUserFamily(uid, familyId);
-
-    final data = await fs.getUser(uid);
-    _user = AppUser(
-      id: uid,
-      name: myName,
-      avatarUrl: null,
-      gender: myGender == 'husband' ? Gender.husband : Gender.wife,
-      familyId: familyId,
-      createdAt: DateTime.now(),
-    );
-    notifyListeners();
-    return familyId;
-  }
-
-  Future<void> refreshUser() async {
-    final fs = await FirestoreService.getInstance();
-    final uid = AuthService.getCurrentUid();
-    if (uid == null) return;
-    final data = await fs.getUser(uid);
-    if (data != null) {
+    final cs = await CloudBaseService.getInstance();
+    await CloudAuthService.init(cs.auth);
+    final uid = await CloudAuthService.signInAnonymously();
+    if (uid != null) {
+      await cs.createUser(uid, '用户', 'husband');
       _user = AppUser(
         id: uid,
-        name: data['name'] ?? '',
-        avatarUrl: data['avatarUrl'],
-        gender: data['gender'] == 'husband' ? Gender.husband : Gender.wife,
-        familyId: data['familyId'],
+        name: '用户',
+        avatarUrl: null,
+        gender: Gender.husband,
         createdAt: DateTime.now(),
       );
       notifyListeners();
     }
   }
 
+  Future<void> createFamilyAndJoin(String familyName, String myName, String myGender) async {
+    final cs = await CloudBaseService.getInstance();
+    final uid = await CloudAuthService.getCurrentUid() ?? '';
+
+    final familyId = await cs.createFamily(familyName, uid);
+    await cs.createUser(uid, myName, myGender);
+    await cs.updateUserFamily(uid, familyId);
+    await cs.initDefaultCategories(familyId);
+
+    final data = await cs.getUser(uid);
+    _user = AppUser.fromMap({
+      'name': myName,
+      'gender': myGender,
+      'familyId': familyId,
+    }, uid);
+    notifyListeners();
+  }
+
+  Future<String> joinFamily(String familyId, String myName, String myGender) async {
+    final cs = await CloudBaseService.getInstance();
+    final uid = await CloudAuthService.getCurrentUid() ?? '';
+
+    await cs.createUser(uid, myName, myGender);
+    await cs.updateUserFamily(uid, familyId);
+
+    final data = await cs.getUser(uid);
+    _user = AppUser.fromMap({
+      'name': myName,
+      'gender': myGender,
+      'familyId': familyId,
+    }, uid);
+    notifyListeners();
+    return familyId;
+  }
+
+  Future<void> refreshUser() async {
+    final cs = await CloudBaseService.getInstance();
+    final uid = await CloudAuthService.getCurrentUid();
+    if (uid == null) return;
+    final data = await cs.getUser(uid);
+    if (data != null) {
+      _user = AppUser.fromMap(data, uid);
+      notifyListeners();
+    }
+  }
+
   Future<void> signOut() async {
-    await AuthService.signOut();
+    await CloudAuthService.signOut();
     _user = null;
     notifyListeners();
   }

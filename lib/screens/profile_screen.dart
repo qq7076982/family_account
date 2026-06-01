@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
-import '../services/firestore_service.dart';
+import '../services/cloudbase_service.dart';
 import '../models/bill.dart';
 import '../models/user.dart';
 import '../utils/utils.dart';
@@ -233,7 +233,6 @@ class ProfileScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              // TODO: 更新昵称
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
@@ -248,13 +247,14 @@ class ProfileScreen extends StatelessWidget {
 
   Future<void> _exportData(BuildContext context) async {
     final auth = context.read<AuthProvider>();
-    final fs = await FirestoreService.getInstance();
-    final bills = await fs.getAllBills(auth.user!.familyId!);
+    final cs = await CloudBaseService.getInstance();
+    final rawBills = await cs.getAllBills(auth.user!.familyId!);
 
     final rows = <List<String>>[
       ['日期', '类型', '分类', '金额', '付款人', '备注'],
     ];
-    for (final bill in bills) {
+    for (final raw in rawBills) {
+      final bill = Bill.fromMap(Map<String, dynamic>.from(raw), raw['_id'] ?? '');
       rows.add([
         Utils.formatDate(bill.date),
         bill.type == BillType.expense ? '支出' : '收入',
@@ -269,16 +269,16 @@ class ProfileScreen extends StatelessWidget {
       ]);
     }
 
-    final csv = const ListToCsvConverter().convert(rows);
+    final csvData = const ListToCsvConverter().convert(rows);
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/家账小记_export.csv');
-    await file.writeAsString(csv);
+    await file.writeAsString(csvData);
 
     await Share.shareXFiles([XFile(file.path)], text: '家账小记账单导出');
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已导出 ${bills.length} 条记录')),
+        SnackBar(content: Text('已导出 ${rawBills.length} 条记录')),
       );
     }
   }
@@ -345,7 +345,6 @@ class _ProfileItem extends StatelessWidget {
           ? IconButton(
               icon: const Icon(Icons.copy, size: 20),
               onPressed: () {
-                // TODO: copy to clipboard
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('已复制')),
                 );
@@ -411,9 +410,7 @@ class _CategoryManagerSheetState extends State<CategoryManagerSheet> {
                             ? const Text('默认', style: TextStyle(fontSize: 12, color: Color(0xFFCCCCCC)))
                             : IconButton(
                                 icon: const Icon(Icons.delete_outline, color: Color(0xFFFF6B6B)),
-                                onPressed: () {
-                                  // TODO: 删除分类
-                                },
+                                onPressed: () {},
                               ),
                       )),
                   const SizedBox(height: 16),
@@ -467,7 +464,6 @@ class _CategoryManagerSheetState extends State<CategoryManagerSheet> {
                   const SizedBox(width: 8),
                   TextButton(
                     onPressed: () {
-                      // 简单图标选择
                       final icons = ['🍜', '🏠', '🚗', '🛒', '🎁', '💊', '👶', '🎮', '💰', '🧧', '📦'];
                       setState(() => icon = icons[(icons.indexOf(icon) + 1) % icons.length]);
                     },
