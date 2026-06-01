@@ -17,16 +17,17 @@ subprojects {
 }
 
 subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty("android")) {
-            val android = project.extensions.findByName("android")
-            if (android is com.android.build.gradle.LibraryExtension) {
-                if (android.namespace.isNullOrEmpty()) {
-                    android.namespace = "com.cloudbase.cloudbase_ce"
-                }
-                if (android.compileSdkVersion < 30) {
-                    android.compileSdkVersion = 30
-                }
+    afterEvaluate<Project> { project ->
+        project.plugins.withId("com.android.application") {
+            val android = project.extensions.getByType<com.android.build.api.dsl.ApplicationExtension>()
+            android.compileSdk.set(30)
+        }
+
+        project.plugins.withId("com.android.library") {
+            val android = project.extensions.getByType<com.android.build.api.dsl.LibraryExtension>()
+            android.compileSdk.set(30)
+            if (project.name == "cloudbase_ce") {
+                android.namespace = "com.cloudbase.cloudbase_ce"
             }
         }
     }
