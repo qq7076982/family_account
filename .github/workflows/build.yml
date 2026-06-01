@@ -25,16 +25,16 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Patch cloudbase_ce plugin
         run: |
           chmod +x android/fix_plugin.sh
           bash android/fix_plugin.sh
 
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Clean and build APK
-        run: flutter clean && flutter build apk --debug
+      - name: Build debug APK
+        run: flutter build apk --debug
         timeout-minutes: 20
 
       - name: Upload artifact
