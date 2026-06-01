@@ -1,5 +1,3 @@
-import java.io.File
-
 allprojects {
     repositories {
         google()
@@ -18,69 +16,69 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-// Map of known missing-namespace packages
-val knownNamespaces = mapOf(
-    "cloudbase_ce" to "com.cloudbase.cloudbase_ce",
-    "jni" to "com.github.dart_lang.jni",
-    "flutter_local_notifications" to "com.dexterous.flutterlocalnotifications",
-    "sqflite_android" to "com.tekartik.sqflite",
-    "shared_preferences_android" to "io.flutter.plugins.sharedpreferences",
-    "path_provider_android" to "io.flutter.plugins.pathprovider"
+// Map of known package name -> namespace / compileSdk upgrades needed
+val knownPatches = mapOf(
+    "cloudbase_ce" to listOf(
+        KnownPatch("namespace", "com.cloudbase.cloudbase_ce"),
+        KnownPatch("compileSdkVersion", "30")
+    ),
+    "jni" to listOf(
+        KnownPatch("namespace", "com.github.dart_lang.jni"),
+        KnownPatch("compileSdkVersion", "30")
+    )
 )
 
-subprojects {
-    beforeEvaluate { proj ->
-        if (proj.name == "app") return@beforeEvaluate
+data class KnownPatch(val key: String, val value: String)
 
-        val androidDir = proj.projectDir.resolve("android")
-        val buildFile = androidDir.resolve("build.gradle")
-        val manifestFile = androidDir.resolve("src/main/AndroidManifest.xml")
+gradle.projectsLoaded {
+    val pubCache = System.getenv("PUB_CACHE")
+        ?: (System.getProperty("user.home") + "/.pub-cache")
+    val cacheDir = file(pubCache).resolve("hosted/pub.dev")
 
-        if (!buildFile.exists()) return@beforeEvaluate
+    for ((pkg, patches) in knownPatches) {
+        val pkgDir = cacheDir.listFiles()?.find {
+            it.name.startsWith("${pkg}-")
+        } ?: continue
 
-        val buildContent = buildFile.readText()
+        val buildFile = pkgDir.resolve("android/build.gradle")
+        if (!buildFile.exists()) continue
 
-        // 1) Inject namespace if missing
-        if (!buildContent.contains("namespace") && manifestFile.exists()) {
-            val manifest = manifestFile.readText()
-            val packageMatcher = Regex("""package="([^"]+)"""").find(manifest)
-            val packageName = packageMatcher?.groupValues?.get(1)
-            if (!packageName.isNullOrEmpty()) {
-                val patched = buildContent.replaceAfterLast(
-                    "android {",
-                    "android {\n    namespace '$packageName'"
-                )
-                buildFile.writeText(patched)
-                println("[family_account] Injected namespace '$packageName' into ${proj.name}")
+        var content = buildFile.readText()
+        var modified = false
+
+        // 1) Inject namespace if missing and not already present
+        val hasNamespace = content.contains("namespace")
+        val hasPackageAttr = Regex("""namespace\s+['\"]([^'\"]+)['\"]""").find(content) != null
+        if (!hasNamespace && !hasPackageAttr) {
+            val manifestFile = pkgDir.resolve("android/src/main/AndroidManifest.xml")
+            if (manifestFile.exists()) {
+                val manifest = manifestFile.readText()
+                val pkgMatcher = Regex("""package="([^"]+)"""").find(manifest)
+                val pkgName = pkgMatcher?.groupValues?.get(1)
+                if (!pkgName.isNullOrEmpty()) {
+                    content = content.replaceAfterLast(
+                        "android {",
+                        "android {\n    namespace '$pkgName'"
+                    )
+                    modified = true
+                    println("[family_account] Patched namespace '$pkgName' into ${pkg}")
+                }
             }
         }
 
         // 2) Upgrade compileSdkVersion if too low
-        val sdkMatcher = Regex("""compileSdkVersion\s+(\d+)""").find(buildContent)
+        val sdkMatcher = Regex("""compileSdkVersion\s+(\d+)""").find(content)
         if (sdkMatcher != null) {
             val currentSdk = sdkMatcher.groupValues[1].toIntOrNull() ?: 0
             if (currentSdk < 30) {
-                val patched = buildContent.replace(
-                    "compileSdkVersion $currentSdk",
-                    "compileSdkVersion 30"
-                )
-                buildFile.writeText(patched)
-                println("[family_account] Upgraded compileSdkVersion $currentSdk→30 in ${proj.name}")
+                content = content.replace("compileSdkVersion $currentSdk", "compileSdkVersion 30")
+                modified = true
+                println("[family_account] Patched compileSdkVersion $currentSdk->30 in ${pkg}")
             }
         }
-    }
 
-    afterEvaluate {
-        if (project.hasProperty("android")) {
-            val android = project.property("android")
-            if (android is com.android.build.gradle.LibraryExtension) {
-                if (android.namespace.isNullOrEmpty()) {
-                    android.namespace = knownNamespaces[project.name]
-                        ?: project.group?.toString()
-                        ?: "auto.${project.name.replace("-", "_")}"
-                    println("[family_account] Set namespace '${android.namespace}' for ${project.name}")
-                }
-            }
+        if (modified) {
+            buildFile.writeText(content)
         }
     }
 }
