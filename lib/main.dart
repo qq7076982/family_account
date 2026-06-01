@@ -3,13 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'providers/auth_provider.dart';
 import 'providers/bill_provider.dart';
-import 'services/firestore_service.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_navigator.dart';
+import 'services/firestore_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await FirestoreService.getInstance(); // warm up Firebase
   runApp(const FamilyAccountApp());
 }
 
@@ -21,10 +22,7 @@ class FamilyAccountApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProxyProvider<FirestoreService, BillProvider>(
-          create: (ctx) => BillProvider(FirestoreService.getInstance() as FirestoreService),
-          update: (ctx, fs, previous) => previous ?? BillProvider(fs),
-        ),
+        ChangeNotifierProvider(create: (_) => BillProvider()),
       ],
       child: MaterialApp(
         title: '家账小记',
@@ -59,7 +57,9 @@ class _AppRootState extends State<AppRoot> {
   @override
   void initState() {
     super.initState();
-    context.read<AuthProvider>().init();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().init();
+    });
   }
 
   @override

@@ -7,28 +7,39 @@ import '../models/category.dart';
 
 class FirestoreService {
   static FirestoreService? _instance;
-  late FirebaseFirestore _db;
+  static FirebaseFirestore? _db;
+  static final Object _initLock = Object();
 
   FirestoreService._();
 
   static Future<FirestoreService> getInstance() async {
     if (_instance == null) {
-      _instance = FirestoreService._();
+      synchronized (_initLock) {
+        if (_instance == null) {
+          _instance = FirestoreService._();
+        }
+      }
       await _instance!._init();
     }
     return _instance!;
   }
 
   Future<void> _init() async {
+    if (_db != null) return;
     await Firebase.initializeApp();
     _db = FirebaseFirestore.instance;
   }
 
-  FirebaseFirestore get db => _db;
+  FirebaseFirestore get db {
+    if (_db == null) {
+      throw StateError('FirestoreService not initialized. Did you forget to call getInstance()?');
+    }
+    return _db!;
+  }
 
   // ========== Family ==========
   Future<String> createFamily(String name, String creatorId) async {
-    final doc = await _db.collection('families').add({
+    final doc = await db.collection('families').add({
       'name': name,
       'creatorId': creatorId,
       'createdAt': Timestamp.now(),
@@ -38,12 +49,12 @@ class FirestoreService {
   }
 
   Future<void> updateFamilyMonthlyBudget(String familyId, double budget) async {
-    await _db.collection('families').doc(familyId).update({'monthlyBudget': budget});
+    await db.collection('families').doc(familyId).update({'monthlyBudget': budget});
   }
 
   // ========== Users ==========
   Future<void> createUser(String uid, String name, String gender) async {
-    await _db.collection('users').doc(uid).set({
+    await db.collection('users').doc(uid).set({
       'name': name,
       'gender': gender,
       'familyId': null,
@@ -53,30 +64,30 @@ class FirestoreService {
   }
 
   Future<Map<String, dynamic>?> getUser(String uid) async {
-    final doc = await _db.collection('users').doc(uid).get();
+    final doc = await db.collection('users').doc(uid).get();
     return doc.data();
   }
 
   Future<void> updateUserFamily(String uid, String familyId) async {
-    await _db.collection('users').doc(uid).update({'familyId': familyId});
+    await db.collection('users').doc(uid).update({'familyId': familyId});
   }
 
   // ========== Bills ==========
   Future<String> addBill(Bill bill) async {
-    final doc = await _db.collection('bills').add(bill.toFirestore());
+    final doc = await db.collection('bills').add(bill.toFirestore());
     return doc.id;
   }
 
   Future<void> updateBill(String billId, Map<String, dynamic> data) async {
-    await _db.collection('bills').doc(billId).update(data);
+    await db.collection('bills').doc(billId).update(data);
   }
 
   Future<void> deleteBill(String billId) async {
-    await _db.collection('bills').doc(billId).delete();
+    await db.collection('bills').doc(billId).delete();
   }
 
   Stream<QuerySnapshot> watchBills(String familyId) {
-    return _db
+    return db
         .collection('bills')
         .where('familyId', isEqualTo: familyId)
         .orderBy('date', descending: true)
@@ -86,7 +97,7 @@ class FirestoreService {
   Future<List<Bill>> getBillsByMonth(String familyId, int year, int month) async {
     final start = DateTime(year, month, 1);
     final end = DateTime(year, month + 1, 0, 23, 59, 59);
-    final snap = await _db
+    final snap = await db
         .collection('bills')
         .where('familyId', isEqualTo: familyId)
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
@@ -98,12 +109,12 @@ class FirestoreService {
 
   // ========== Settlements ==========
   Future<String> addSettlement(Settlement settlement) async {
-    final doc = await _db.collection('settlements').add(settlement.toFirestore());
+    final doc = await db.collection('settlements').add(settlement.toFirestore());
     return doc.id;
   }
 
   Stream<QuerySnapshot> watchSettlements(String familyId) {
-    return _db
+    return db
         .collection('settlements')
         .where('familyId', isEqualTo: familyId)
         .orderBy('date', descending: true)
@@ -112,9 +123,9 @@ class FirestoreService {
 
   // ========== Categories ==========
   Future<void> initDefaultCategories(String familyId) async {
-    final batch = _db.batch();
+    final batch = db.batch();
     for (final cat in Category.defaultCategories()) {
-      final ref = _db.collection('categories').doc('${familyId}_${cat.id}');
+      final ref = db.collection('categories').doc('${familyId}_${cat.id}');
       batch.set(ref, {
         'name': cat.name,
         'icon': cat.icon,
@@ -127,12 +138,12 @@ class FirestoreService {
   }
 
   Stream<QuerySnapshot> watchCategories(String familyId) {
-    return _db.collection('categories').where('familyId', isEqualTo: familyId).snapshots();
+    return db.collection('categories').where('familyId', isEqualTo: familyId).snapshots();
   }
 
   Future<void> addCategory(String familyId, String name, String icon, bool isExpense) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
-    await _db.collection('categories').doc('${familyId}_$id').set({
+    await db.collection('categories').doc('${familyId}_$id').set({
       'name': name,
       'icon': icon,
       'isDefault': false,
@@ -143,14 +154,14 @@ class FirestoreService {
 
   // ========== Budgets ==========
   Future<void> setBudget(Budget budget) async {
-    await _db
+    await db
         .collection('budgets')
         .doc('${budget.familyId}_${budget.year}_${budget.month}')
         .set(budget.toFirestore());
   }
 
   Future<Budget?> getBudget(String familyId, int year, int month) async {
-    final doc = await _db
+    final doc = await db
         .collection('budgets')
         .doc('${familyId}_${year}_$month')
         .get();
@@ -160,7 +171,7 @@ class FirestoreService {
 
   // ========== Export ==========
   Future<List<Bill>> getAllBills(String familyId) async {
-    final snap = await _db
+    final snap = await db
         .collection('bills')
         .where('familyId', isEqualTo: familyId)
         .orderBy('date', descending: true)

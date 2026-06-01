@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../models/bill.dart';
 import '../models/settlement.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../services/firestore_service.dart';
-import 'package:uuid/uuid.dart';
 
 class BillProvider extends ChangeNotifier {
-  final FirestoreService _fs;
   List<Bill> _bills = [];
   List<Bill> _monthlyBills = [];
   List<Settlement> _settlements = [];
@@ -27,24 +26,25 @@ class BillProvider extends ChangeNotifier {
   List<Category> get incomeCategories =>
       _categories.where((c) => !c.isExpense).toList();
 
-  BillProvider(this._fs);
-
-  void watchBills(String familyId) {
-    _fs.watchBills(familyId).listen((snap) {
+  Future<void> watchBills(String familyId) async {
+    final fs = await FirestoreService.getInstance();
+    fs.watchBills(familyId).listen((snap) {
       _bills = snap.docs.map((d) => Bill.fromFirestore(d)).toList();
       notifyListeners();
     });
   }
 
-  void watchSettlements(String familyId) {
-    _fs.watchSettlements(familyId).listen((snap) {
+  Future<void> watchSettlements(String familyId) async {
+    final fs = await FirestoreService.getInstance();
+    fs.watchSettlements(familyId).listen((snap) {
       _settlements = snap.docs.map((d) => Settlement.fromFirestore(d)).toList();
       notifyListeners();
     });
   }
 
-  void watchCategories(String familyId) {
-    _fs.watchCategories(familyId).listen((snap) {
+  Future<void> watchCategories(String familyId) async {
+    final fs = await FirestoreService.getInstance();
+    fs.watchCategories(familyId).listen((snap) {
       _categories = snap.docs.map((d) => Category.fromFirestore(d)).toList();
       notifyListeners();
     });
@@ -53,7 +53,8 @@ class BillProvider extends ChangeNotifier {
   Future<void> loadMonthlyBills(String familyId, int year, int month) async {
     _loading = true;
     notifyListeners();
-    _monthlyBills = await _fs.getBillsByMonth(familyId, year, month);
+    final fs = await FirestoreService.getInstance();
+    _monthlyBills = await fs.getBillsByMonth(familyId, year, month);
     _loading = false;
     notifyListeners();
   }
@@ -68,6 +69,7 @@ class BillProvider extends ChangeNotifier {
     String? note,
     required String creatorId,
   }) async {
+    final fs = await FirestoreService.getInstance();
     final bill = Bill(
       id: const Uuid().v4(),
       familyId: familyId,
@@ -80,15 +82,17 @@ class BillProvider extends ChangeNotifier {
       creatorId: creatorId,
       createdAt: DateTime.now(),
     );
-    return await _fs.addBill(bill);
+    return await fs.addBill(bill);
   }
 
   Future<void> updateBill(String billId, Map<String, dynamic> data) async {
-    await _fs.updateBill(billId, data);
+    final fs = await FirestoreService.getInstance();
+    await fs.updateBill(billId, data);
   }
 
   Future<void> deleteBill(String billId) async {
-    await _fs.deleteBill(billId);
+    final fs = await FirestoreService.getInstance();
+    await fs.deleteBill(billId);
   }
 
   Future<void> addSettlement({
@@ -99,6 +103,7 @@ class BillProvider extends ChangeNotifier {
     DateTime? date,
     String? note,
   }) async {
+    final fs = await FirestoreService.getInstance();
     final settlement = Settlement(
       id: const Uuid().v4(),
       familyId: familyId,
@@ -109,11 +114,12 @@ class BillProvider extends ChangeNotifier {
       note: note,
       createdAt: DateTime.now(),
     );
-    await _fs.addSettlement(settlement);
+    await fs.addSettlement(settlement);
   }
 
   Future<void> setBudget(String familyId, double totalBudget,
       Map<String, double> categoryBudgets, int month, int year) async {
+    final fs = await FirestoreService.getInstance();
     final budget = Budget(
       id: '${familyId}_${year}_$month',
       familyId: familyId,
@@ -122,60 +128,68 @@ class BillProvider extends ChangeNotifier {
       month: month,
       year: year,
     );
-    await _fs.setBudget(budget);
+    await fs.setBudget(budget);
     _budget = budget;
     notifyListeners();
   }
 
   Future<void> loadBudget(String familyId, int month, int year) async {
-    _budget = await _fs.getBudget(familyId, month, year);
+    final fs = await FirestoreService.getInstance();
+    _budget = await fs.getBudget(familyId, month, year);
     notifyListeners();
   }
 
   Future<void> addCategory(
       String familyId, String name, String icon, bool isExpense) async {
-    await _fs.addCategory(familyId, name, icon, isExpense);
+    final fs = await FirestoreService.getInstance();
+    await fs.addCategory(familyId, name, icon, isExpense);
   }
 
-  // 统计数据
+  // ========== 统计数据 ==========
   double getTotalExpense() {
-    return _monthlyBills
-        .where((b) => b.type == BillType.expense)
-        .fold(0.0, (sum, b) => sum + b.amount);
+    double total = 0.0;
+    for (final bill in _monthlyBills) {
+      if (bill.type == BillType.expense) total += bill.amount;
+    }
+    return total;
   }
 
   double getTotalIncome() {
-    return _monthlyBills
-        .where((b) => b.type == BillType.income)
-        .fold(0.0, (sum, b) => sum + b.amount);
+    double total = 0.0;
+    for (final bill in _monthlyBills) {
+      if (bill.type == BillType.income) total += bill.amount;
+    }
+    return total;
   }
 
   double getHusbandExpense() {
-    return _monthlyBills
-        .where((b) =>
-            b.type == BillType.expense &&
-            (b.payType == PayType.husband || b.payType == PayType.shared))
-        .fold(0.0, (sum, b) {
-      if (b.payType == PayType.shared) return sum + b.amount / 2;
-      return sum + b.amount;
-    });
+    double total = 0.0;
+    for (final bill in _monthlyBills) {
+      if (bill.type == BillType.expense &&
+          (bill.payType == PayType.husband || bill.payType == PayType.shared)) {
+        total += bill.payType == PayType.shared ? bill.amount / 2 : bill.amount;
+      }
+    }
+    return total;
   }
 
   double getWifeExpense() {
-    return _monthlyBills
-        .where((b) =>
-            b.type == BillType.expense &&
-            (b.payType == PayType.wife || b.payType == PayType.shared))
-        .fold(0.0, (sum, b) {
-      if (b.payType == PayType.shared) return sum + b.amount / 2;
-      return sum + b.amount;
-    });
+    double total = 0.0;
+    for (final bill in _monthlyBills) {
+      if (bill.type == BillType.expense &&
+          (bill.payType == PayType.wife || bill.payType == PayType.shared)) {
+        total += bill.payType == PayType.shared ? bill.amount / 2 : bill.amount;
+      }
+    }
+    return total;
   }
 
   Map<String, double> getCategoryExpenses() {
     final Map<String, double> result = {};
-    for (final bill in _monthlyBills.where((b) => b.type == BillType.expense)) {
-      result[b.category] = (result[b.category] ?? 0) + bill.amount;
+    for (final bill in _monthlyBills) {
+      if (bill.type == BillType.expense) {
+        result[bill.category] = (result[bill.category] ?? 0.0) + bill.amount;
+      }
     }
     return result;
   }
