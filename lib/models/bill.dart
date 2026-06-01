@@ -1,0 +1,97 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+enum BillType { income, expense }
+enum PayType { husband, wife, shared }
+
+class Bill {
+  final String id;
+  final String familyId;
+  final BillType type;
+  final double amount;
+  final String category;
+  final PayType payType;
+  final DateTime date;
+  final String? note;
+  final String creatorId;
+  final bool isSettled;
+  final DateTime createdAt;
+
+  Bill({
+    required this.id,
+    required this.familyId,
+    required this.type,
+    required this.amount,
+    required this.category,
+    required this.payType,
+    required this.date,
+    this.note,
+    required this.creatorId,
+    this.isSettled = false,
+    required this.createdAt,
+  });
+
+  factory Bill.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Bill(
+      id: doc.id,
+      familyId: data['familyId'] ?? '',
+      type: data['type'] == 'income' ? BillType.income : BillType.expense,
+      amount: (data['amount'] ?? 0).toDouble(),
+      category: data['category'] ?? '',
+      payType: _parsePayType(data['payType']),
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      note: data['note'],
+      creatorId: data['creatorId'] ?? '',
+      isSettled: data['isSettled'] ?? false,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  static PayType _parsePayType(String? val) {
+    if (val == 'husband') return PayType.husband;
+    if (val == 'wife') return PayType.wife;
+    return PayType.shared;
+  }
+
+  Map<String, dynamic> toFirestore() {
+    String payTypeStr = 'shared';
+    if (payType == PayType.husband) payTypeStr = 'husband';
+    if (payType == PayType.wife) payTypeStr = 'wife';
+
+    return {
+      'familyId': familyId,
+      'type': type == BillType.income ? 'income' : 'expense',
+      'amount': amount,
+      'category': category,
+      'payType': payTypeStr,
+      'date': Timestamp.fromDate(date),
+      'note': note,
+      'creatorId': creatorId,
+      'isSettled': isSettled,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  Bill copyWith({
+    double? amount,
+    String? category,
+    PayType? payType,
+    DateTime? date,
+    String? note,
+    bool? isSettled,
+  }) {
+    return Bill(
+      id: id,
+      familyId: familyId,
+      type: type,
+      amount: amount ?? this.amount,
+      category: category ?? this.category,
+      payType: payType ?? this.payType,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      creatorId: creatorId,
+      isSettled: isSettled ?? this.isSettled,
+      createdAt: createdAt,
+    );
+  }
+}
