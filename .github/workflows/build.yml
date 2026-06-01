@@ -35,6 +35,3 @@ jobs:
           name: app-debug.apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
-
-      - name: Upload google-services.json
-        run: echo "Placeholder google-services.json" && ls android/app/google-services.json
