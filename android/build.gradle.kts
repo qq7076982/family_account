@@ -16,44 +16,18 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-val knownNamespaces = mapOf(
-    "cloudbase_ce" to "com.cloudbase.cloudbase_ce",
-    "jni" to "com.github.dart_lang.jni"
-)
-
-gradle.buildStarted { _ ->
-    val pubCache = System.getenv("PUB_CACHE")
-        ?: (System.getProperty("user.home") + "/.pub-cache")
-    val cacheDir = file(pubCache).resolve("hosted/pub.dev")
-
-    for ((pkg, ns) in knownNamespaces) {
-        val pkgDir = cacheDir.listFiles()?.find {
-            it.isDirectory && it.name.startsWith("${pkg}-")
-        } ?: continue
-
-        val buildFile = pkgDir.resolve("android/build.gradle")
-        if (!buildFile.exists()) continue
-
-        var content = buildFile.readText()
-        var modified = false
-
-        if (!content.contains("namespace")) {
-            content = content.replaceFirst("android {", "android {\n    namespace '$ns'")
-            modified = true
-        }
-
-        val sdkMatcher = Regex("""compileSdkVersion\s+(\d+)""").find(content)
-        if (sdkMatcher != null) {
-            val currentSdk = sdkMatcher.groupValues[1].toIntOrNull() ?: 0
-            if (currentSdk < 30) {
-                content = content.replace("compileSdkVersion $currentSdk", "compileSdkVersion 30")
-                modified = true
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            val android = project.extensions.findByName("android")
+            if (android is com.android.build.gradle.LibraryExtension) {
+                if (android.namespace.isNullOrEmpty()) {
+                    android.namespace = "com.cloudbase.cloudbase_ce"
+                }
+                if (android.compileSdkVersion < 30) {
+                    android.compileSdkVersion = 30
+                }
             }
-        }
-
-        if (modified) {
-            buildFile.writeText(content)
-            println("[family_account] Patched ${pkg}: namespace='$ns', compileSdk=30")
         }
     }
 }
