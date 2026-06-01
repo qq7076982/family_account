@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -26,12 +26,24 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Show Flutter info
+        run: |
+          flutter --version
+          flutter doctor -v 2>&1 | head -50
+
       - name: Build debug APK
-        run: flutter build apk --debug
+        run: |
+          set -x
+          flutter build apk --debug 2>&1
         timeout-minutes: 20
 
+      - name: Check build output
+        run: |
+          ls -la build/app/outputs/flutter-apk/ 2>/dev/null || echo "APK directory not found"
+          ls -la build/app/outputs/ 2>/dev/null || echo "outputs directory not found"
+
       - name: Upload artifact
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug.apk
