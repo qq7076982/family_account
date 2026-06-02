@@ -10,16 +10,6 @@ allprojects {
     }
 }
 
-subprojects {
-    plugins.withId("com.android.library") {
-        extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
-            if (compileSdkVersion < 34) {
-                compileSdkVersion = 34
-            }
-        }
-    }
-}
-
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
