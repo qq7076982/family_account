@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -187,16 +186,12 @@ class ProfileScreen extends StatelessWidget {
     final file = File('${dir.path}/family_account_export.csv');
     await file.writeAsString(csvData);
 
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      text: '家账小记账单导出',
-    );
-
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('已导出 ${rawBills.length} 条记录'),
+          content: Text('已导出 ${rawBills.length} 条记录到 ${file.path}'),
           backgroundColor: AppColors.income,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
