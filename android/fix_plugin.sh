@@ -35,8 +35,8 @@ fi
 # Upgrade compileSdkVersion if too low
 CURRENT=$(grep "compileSdkVersion" "$BUILD_FILE" 2>/dev/null | grep -o "[0-9]\+" | head -1)
 if [ -n "$CURRENT" ] && [ "$CURRENT" -lt 30 ]; then
-    sed -i "s/compileSdkVersion $CURRENT/compileSdkVersion 30/" "$BUILD_FILE"
-    echo "[fix_plugin] Upgraded compileSdkVersion $CURRENT -> 30"
+    sed -i "s/compileSdkVersion $CURRENT/compileSdkVersion 34/" "$BUILD_FILE"
+    echo "[fix_plugin] Upgraded compileSdkVersion $CURRENT -> 34"
 elif [ -n "$CURRENT" ]; then
     echo "[fix_plugin] compileSdkVersion is $CURRENT (ok)"
 fi
