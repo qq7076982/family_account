@@ -554,8 +554,34 @@ class _BillCardView extends StatelessWidget {
     return Dismissible(
       key: Key(bill.id),
       direction: DismissDirection.endToStart,
-      confirmDismiss: (_) async => true,
-      onDismissed: (_) => onDelete(),
+      confirmDismiss: (_) async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.xlR),
+            title: const Text('删除账单'),
+            content: const Text('确定要删除这条账单吗？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.expense,
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.mdR),
+                ),
+                child: const Text('删除', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true && context.mounted) {
+          await context.read<BillProvider>().deleteBill(bill.id);
+        }
+        return confirmed ?? false;
+      },
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
