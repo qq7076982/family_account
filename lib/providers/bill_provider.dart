@@ -89,6 +89,9 @@ class BillProvider extends ChangeNotifier {
     );
 
     await _loadBills();
+    // 刷新月度账单（首页统计用）
+    final now = DateTime.now();
+    await loadMonthlyBills(now.year, now.month);
     return id;
   }
 
