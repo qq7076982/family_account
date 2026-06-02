@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
-import '../models/bill.dart';
 import '../utils/utils.dart';
 
 class StatsScreen extends StatefulWidget {

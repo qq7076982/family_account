@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
-import '../models/bill.dart';
 import '../models/settlement.dart';
 import '../utils/utils.dart';
 
@@ -248,8 +247,6 @@ class _AccountScreenState extends State<AccountScreen> {
           ElevatedButton(
             onPressed: () async {
               final bp = context.read<BillProvider>();
-              final fromId = diff > 0 ? auth.user!.id : auth.user!.id;
-              final toId = diff > 0 ? 'other' : auth.user!.id;
               await bp.addSettlement(
                 familyId: auth.user!.familyId!,
                 amount: diff.abs(),
@@ -301,7 +298,7 @@ class _SettlementItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${Utils.formatMoney(settlement.amount)}',
+                  Utils.formatMoney(settlement.amount),
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 if (settlement.note != null)

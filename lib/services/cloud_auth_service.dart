@@ -8,7 +8,7 @@ class CloudAuthService {
   }
 
   static Future<String?> signInAnonymously() async {
-    final res = await _auth!.signInAnonymously();
+    await _auth!.signInAnonymously();
     final state = await _auth!.getAuthState();
     // The refresh token serves as the anonymous user identifier
     return state?.refreshToken;

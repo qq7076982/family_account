@@ -57,7 +57,7 @@ class AuthProvider extends ChangeNotifier {
     await cs.updateUserFamily(uid, familyId);
     await cs.initDefaultCategories(familyId);
 
-    final data = await cs.getUser(uid);
+    await cs.getUser(uid); // ensure user record exists
     _user = AppUser.fromMap({
       'name': myName,
       'gender': myGender,
@@ -73,7 +73,7 @@ class AuthProvider extends ChangeNotifier {
     await cs.createUser(uid, myName, myGender);
     await cs.updateUserFamily(uid, familyId);
 
-    final data = await cs.getUser(uid);
+    await cs.getUser(uid); // ensure user record exists
     _user = AppUser.fromMap({
       'name': myName,
       'gender': myGender,
