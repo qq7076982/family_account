@@ -66,6 +66,7 @@ class DatabaseHelper {
             family_id TEXT NOT NULL,
             user_id TEXT NOT NULL,
             category_id TEXT NOT NULL,
+            category_name TEXT,
             amount REAL NOT NULL,
             note TEXT,
             date INTEGER NOT NULL,
@@ -229,10 +230,14 @@ class DatabaseHelper {
   }
 
   // ========== Bills ==========
+  // Bills 表新增 category_name 字段（用于 UI 直接显示分类名）
+  // ALTER TABLE bills ADD COLUMN category_name TEXT
+  // 但为兼容旧数据库，createBill 已写入 category_name 列
   Future<String> createBill({
     required String familyId,
     required String userId,
     required String categoryId,
+    required String categoryName,
     required double amount,
     required DateTime date,
     String? note,
@@ -244,13 +249,14 @@ class DatabaseHelper {
       'family_id': familyId,
       'user_id': userId,
       'category_id': categoryId,
+      'category_name': categoryName,
       'amount': amount,
       'note': note ?? '',
       'date': date.millisecondsSinceEpoch,
       'created_at': now,
       'is_deleted': 0,
     });
-    debugPrint('[DB] 创建账单: ¥$amount, 分类: $categoryId, ID: $id');
+    debugPrint('[DB] 创建账单: ¥$amount, 分类: $categoryName($categoryId), ID: $id');
     return id;
   }
 
@@ -285,7 +291,21 @@ class DatabaseHelper {
     await db.update('bills', {'is_deleted': 1}, where: 'id = ?', whereArgs: [billId]);
   }
 
-  // ========== Budgets ==========
+  Future<void> addCategory(String familyId, String name, String emoji, String type, String color) async {
+    final id = 'cat_${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await db.insert('categories', {
+      'id': id,
+      'family_id': familyId,
+      'name': name,
+      'emoji': emoji,
+      'type': type,
+      'color': color,
+      'is_default': 0,
+      'created_at': now,
+    });
+    debugPrint('[DB] 新增分类: $name $emoji, ID: $id');
+  }
   Future<void> setBudget(String familyId, String? categoryId, double amount, String month) async {
     final id = 'bud_${DateTime.now().millisecondsSinceEpoch}';
     final now = DateTime.now().millisecondsSinceEpoch;

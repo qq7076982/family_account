@@ -165,9 +165,11 @@ class _AccountScreenState extends State<AccountScreen> {
           ElevatedButton(
             onPressed: () async {
               final bp = context.read<BillProvider>();
+              // 查找对方用户 ID
+              final otherId = await bp.getOtherUserId();
               await bp.addSettlement(
-                fromUserId: diff > 0 ? auth.user!.id : 'other',
-                toUserId: diff > 0 ? 'other' : auth.user!.id,
+                fromUserId: diff > 0 ? auth.user!.id : (otherId ?? auth.user!.id),
+                toUserId: diff > 0 ? (otherId ?? auth.user!.id) : auth.user!.id,
                 amount: diff.abs(),
                 note: noteController.text.isEmpty ? null : noteController.text,
               );

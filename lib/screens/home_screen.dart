@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.user?.familyId != null) {
       final bp = context.read<BillProvider>();
-      bp.init(auth.user!.familyId!);
+      bp.init(auth.user!.familyId!, currentUserId: auth.user!.id);
       final now = DateTime.now();
       bp.loadMonthlyBills(now.year, now.month);
       bp.loadBudget(now.month, now.year);
@@ -625,7 +625,7 @@ class _BillCardView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    bill.category,
+                    bill.categoryName ?? bill.category,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 4),

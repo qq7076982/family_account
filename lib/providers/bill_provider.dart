@@ -3,7 +3,6 @@ import '../models/bill.dart';
 import '../models/settlement.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
-import '../models/user.dart';
 import '../services/database_service.dart';
 
 class BillProvider extends ChangeNotifier {
@@ -15,6 +14,7 @@ class BillProvider extends ChangeNotifier {
   bool _loading = false;
   DatabaseHelper? _db;
   String? _familyId;
+  String? _currentUserId;
 
   List<Bill> get bills => _bills;
   List<Bill> get monthlyBills => _monthlyBills;
@@ -28,8 +28,9 @@ class BillProvider extends ChangeNotifier {
   List<Category> get incomeCategories =>
       _categories.where((c) => !c.isExpense).toList();
 
-  Future<void> init(String familyId) async {
+  Future<void> init(String familyId, {String? currentUserId}) async {
     _familyId = familyId;
+    _currentUserId = currentUserId;
     _db = await DatabaseHelper.getInstance();
     await _loadCategories();
     await _loadBills();
@@ -79,10 +80,14 @@ class BillProvider extends ChangeNotifier {
   }) async {
     if (_familyId == null) throw Exception('未加入账本');
 
+    // 存分类名称，用于 UI 直接显示
+    final catName = getCategoryNameById(categoryId);
+
     final id = await _db!.createBill(
       familyId: _familyId!,
       userId: userId,
       categoryId: categoryId,
+      categoryName: catName,
       amount: amount,
       date: date,
       note: note,
@@ -103,8 +108,12 @@ class BillProvider extends ChangeNotifier {
   Future<void> deleteBill(String billId) async {
     await _db!.deleteBill(billId);
     await _loadBills();
+    // 刷新月度账单
+    final now = DateTime.now();
+    await loadMonthlyBills(now.year, now.month);
   }
 
+  // ========== 结算（修复 Bug #4：使用真实对方用户 ID）==========
   Future<void> addSettlement({
     required String fromUserId,
     required String toUserId,
@@ -114,17 +123,27 @@ class BillProvider extends ChangeNotifier {
   }) async {
     if (_familyId == null) throw Exception('未加入账本');
 
+    // 如果传入的是 'other'，自动查找对方用户
+    String fromId = fromUserId;
+    String toId = toUserId;
+
+    if (fromUserId == 'other' || toUserId == 'other') {
+      final otherId = await _getOtherUserId();
+      if (otherId != null) {
+        if (fromUserId == 'other') fromId = otherId;
+        if (toUserId == 'other') toId = otherId;
+      }
+    }
+
     await _db!.createSettlement(
       familyId: _familyId!,
-      fromUserId: fromUserId,
-      toUserId: toUserId,
+      fromUserId: fromId,
+      toUserId: toId,
       amount: amount,
       note: note,
     );
 
-    final rows = await _db!.getSettlementsByFamily(_familyId!);
-    _settlements = rows.map((r) => Settlement.fromMap(r, r['id'] as String)).toList();
-    notifyListeners();
+    await loadSettlements();
   }
 
   Future<void> loadSettlements() async {
@@ -162,10 +181,37 @@ class BillProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ========== 新增分类（修复 Bug #7）==========
   Future<void> addCategory(String name, String emoji, bool isExpense, String color) async {
     if (_familyId == null) return;
-    // 使用现有的 addCategory 逻辑
-    notifyListeners();
+    final type = isExpense ? 'expense' : 'income';
+    await _db!.addCategory(_familyId!, name, emoji, type, color);
+    await _loadCategories();
+  }
+
+  // ========== 查找对方用户 ID ==========
+  // ========== 查找对方用户 ID ==========
+  Future<String?> getOtherUserId() async {
+    return _getOtherUserId();
+  }
+
+  Future<String?> _getOtherUserId() async {
+    if (_familyId == null || _db == null) return null;
+    final rows = await _db!.getUsersByFamily(_familyId!);
+    for (final r in rows) {
+      if (r['id'] != _currentUserId) return r['id'] as String;
+    }
+    return null;
+  }
+
+  void setCurrentUserId(String id) {
+    _currentUserId = id;
+  }
+
+  // ========== 工具方法 ==========
+  String getCategoryNameById(String id) {
+    final cat = _categories.where((c) => c.id == id).firstOrNull;
+    return cat?.name ?? id;
   }
 
   // ========== 统计 ==========
@@ -207,11 +253,13 @@ class BillProvider extends ChangeNotifier {
     return total;
   }
 
+  // 修复 Bug #6：分类统计使用分类名称而非 ID
   Map<String, double> getCategoryExpenses() {
     final Map<String, double> result = {};
     for (final bill in _monthlyBills) {
       if (bill.type == BillType.expense) {
-        result[bill.category] = (result[bill.category] ?? 0.0) + bill.amount;
+        final name = bill.categoryName ?? getCategoryNameById(bill.category);
+        result[name] = (result[name] ?? 0.0) + bill.amount;
       }
     }
     return result;

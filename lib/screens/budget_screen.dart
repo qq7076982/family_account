@@ -118,7 +118,6 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   Future<void> _saveTotalBudget() async {
-    final auth = context.read<AuthProvider>();
     final bp = context.read<BillProvider>();
     final budget = double.tryParse(_totalController.text) ?? 0;
     final now = DateTime.now();
@@ -136,7 +135,6 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   Future<void> _saveCategoryBudgets() async {
-    final auth = context.read<AuthProvider>();
     final bp = context.read<BillProvider>();
     final now = DateTime.now();
 
