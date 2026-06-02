@@ -20,10 +20,10 @@ class CloudBaseService {
   Future<void> _init() async {
     if (_initialized) return;
     _core = CloudBaseCore.init({
-      'env': 'YOUR_ENV_ID', // TODO: 替换为云开发环境 ID
+      'env': 'zhangben-2-d9gmgdlqn34dc6d4f',
       'appAccess': {
-        'key': 'YOUR_APP_ACCESS_KEY', // TODO: 替换为应用访问密钥
-        'version': 'YOUR_APP_ACCESS_VERSION', // TODO: 替换为版本号
+        'key': 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjlkMWRjMzFlLWI0ZDAtNDQ4Yi1hNzZmLWIwY2M2M2Q4MTQ5OCJ9.eyJpc3MiOiJodHRwczovL3poYW5nYmVuLTItZDlnbWdkbHFuMzRkYzZkNGYuYXAtc2hhbmdoYWkudGNiLWFwaS50ZW5jZW50Y2xvdWRhcGkuY29tIiwic3ViIjoiYW5vbiIsImF1ZCI6InpoYW5nYmVuLTItZDlnbWdkbHFuMzRkYzZkNGYiLCJleHAiOjQwODQwNTc5NjksImlhdCI6MTc4MDM3NDc2OSwibm9uY2UiOiJQQ3JielBtT1M2Q3NZeEd2VDJfeVNBIiwiYXRfaGFzaCI6IlBDcmJ6UG1PUzZDc1l4R3ZUMl95U0EiLCJuYW1lIjoiQW5vbnltb3VzIiwic2NvcGUiOiJhbm9ueW1vdXMiLCJwcm9qZWN0X2lkIjoiemhhbmdiZW4tMi1kOWdtZ2RscW4zNGRjNmQ0ZiIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJ1c2VyX3R5cGUiOiIiLCJjbGllbnRfdHlwZSI6ImNsaWVudF91c2VyIiwiaXNfc3lzdGVtX2FkbWluIjpmYWxzZX0.CUS20p1eu7XSm9sifZ-3b1Hb1ffcZNC9AiRPPnjZ_xOMlIfSPa6inVdKw8o14TEL6R6S1MzlEFDJGTX_UAHEv5MbfhLgLrDRtBqX_bA_SD3fkFOE4OdqeOoqgk88Vsq2_0JL6a5XY5JGi-ZBf2y2Nv_zEudCjYBzgzpaDhsiI3Kb8LB1XqKnNilxebOqqe0W7LqiqTFW3nf3RkTyb--F0M8guv3st_HAJ3ymiCWhUJTfWXHFWcjLNbW9rEPKlRzKYJ6J9d6a77QtMIOptN8sCez9h_I9lQElbBlnYPYyAyVsp5RNb4_O2tWX84FsvCg5EbWMOGjpkHYAcLG5BH8Upw',
+        'version': 'v1',
       },
       'timeout': 5000,
     });
