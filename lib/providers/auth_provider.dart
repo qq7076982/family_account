@@ -49,7 +49,6 @@ class AuthProvider extends ChangeNotifier {
       final uid = await CloudAuthService.signInAnonymously();
       debugPrint('[AuthProvider] signInAnon result uid: $uid');
       if (uid != null) {
-        await cs.createUser(uid, '用户', 'husband');
         _user = AppUser(
           id: uid,
           name: '用户',
@@ -70,27 +69,19 @@ class AuthProvider extends ChangeNotifier {
     debugPrint('[AuthProvider] createFamilyAndJoin called: familyName=$familyName myName=$myName');
 
     try {
-      // Step 1: 获取 CloudBase 实例并初始化
+      // Step 1: 获取 CloudBase 实例
       debugPrint('[AuthProvider] Step1: 初始化 CloudBase...');
       final cs = await CloudBaseService.getInstance();
       await CloudAuthService.init(cs.auth);
       debugPrint('[AuthProvider] Step1: CloudBase 初始化完成');
 
-      // Step 2: 获取当前 uid
-      debugPrint('[AuthProvider] Step2: 获取 uid...');
-      var uid = await CloudAuthService.getCurrentUid();
-      debugPrint('[AuthProvider] Step2: uid=$uid');
-
-      // 如果没有 uid，先匿名登录
-      if (uid == null) {
-        debugPrint('[AuthProvider] uid 为空，执行匿名登录...');
-        await signInAnon();
-        uid = await CloudAuthService.getCurrentUid();
-        debugPrint('[AuthProvider] 匿名登录后 uid=$uid');
-      }
+      // Step 2: 确保匿名登录
+      debugPrint('[AuthProvider] Step2: 执行匿名登录...');
+      var uid = await CloudAuthService.signInAnonymously();
+      debugPrint('[AuthProvider] Step2: 匿名登录完成, uid=$uid');
 
       if (uid == null) {
-        throw Exception('匿名登录失败，无法获取用户ID');
+        throw Exception('匿名登录失败，返回的 uid 为空');
       }
 
       // Step 3: 创建账本
@@ -116,7 +107,7 @@ class AuthProvider extends ChangeNotifier {
       // Step 7: 刷新用户数据
       debugPrint('[AuthProvider] Step7: 刷新用户数据...');
       await refreshUser();
-      debugPrint('[AuthProvider] Step7: 完成!');
+      debugPrint('[AuthProvider] Step7: 完成! familyId=$familyId');
 
       return familyId;
     } catch (e) {
@@ -135,11 +126,8 @@ class AuthProvider extends ChangeNotifier {
       final cs = await CloudBaseService.getInstance();
       await CloudAuthService.init(cs.auth);
 
-      var uid = await CloudAuthService.getCurrentUid();
-      if (uid == null) {
-        await signInAnon();
-        uid = await CloudAuthService.getCurrentUid();
-      }
+      var uid = await CloudAuthService.signInAnonymously();
+      debugPrint('[AuthProvider] joinFamily: uid=$uid');
 
       if (uid == null) {
         throw Exception('匿名登录失败');

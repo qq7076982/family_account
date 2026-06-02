@@ -9,17 +9,28 @@ class CloudAuthService {
   }
 
   static Future<String?> signInAnonymously() async {
-    final res = await _auth!.signInAnonymously();
-    final state = await _auth!.getAuthState();
-    debugPrint('[CloudAuth] signInAnonymously - res: $res');
-    debugPrint('[CloudAuth] state: ${state?.uid} ${state?.refreshToken}');
-    return state?.uid;
+    try {
+      final state = await _auth!.signInAnonymously();
+      // The anonymous uuid is stored in cache. Use refreshToken as the user identifier.
+      final refreshToken = state?.refreshToken;
+      debugPrint('[CloudAuth] signIn result - refreshToken: ${refreshToken?.substring(0, 20)}...');
+      return refreshToken;
+    } catch (e) {
+      debugPrint('[CloudAuth] signInAnonymously ERROR: $e');
+      rethrow;
+    }
   }
 
   static Future<String?> getCurrentUid() async {
-    final state = await _auth?.getAuthState();
-    debugPrint('[CloudAuth] getCurrentUid - state.uid: ${state?.uid}');
-    return state?.uid;
+    try {
+      final state = await _auth?.getAuthState();
+      final refreshToken = state?.refreshToken;
+      debugPrint('[CloudAuth] getCurrentUid - refreshToken: ${refreshToken?.substring(0, 20)}...');
+      return refreshToken;
+    } catch (e) {
+      debugPrint('[CloudAuth] getCurrentUid ERROR: $e');
+      return null;
+    }
   }
 
   static Future<void> signOut() async {
