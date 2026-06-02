@@ -1,4 +1,5 @@
 import 'package:cloudbase_ce/cloudbase_ce.dart';
+import 'package:flutter/foundation.dart';
 
 class CloudBaseService {
   static CloudBaseService? _instance;
@@ -19,17 +20,20 @@ class CloudBaseService {
 
   Future<void> _init() async {
     if (_initialized) return;
+    debugPrint('[CloudBase] 初始化开始...');
     _core = CloudBaseCore.init({
       'env': 'zhangben-2-d9gmgdlqn34dc6d4f',
       'appAccess': {
-        'key': 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjlkMWRjMzFlLWI0ZDAtNDQ4Yi1hNzZmLWIwY2M2M2Q4MTQ5OCJ9.eyJpc3MiOiJodHRwczovL3poYW5nYmVuLTItZDlnbWdkbHFuMzRkYzZkNGYuYXAtc2hhbmdoYWkudGNiLWFwaS50ZW5jZW50Y2xvdWRhcGkuY29tIiwic3ViIjoiYW5vbiIsImF1ZCI6InpoYW5nYmVuLTItZDlnbWdkbHFuMzRkYzZkNGYiLCJleHAiOjQwODQwNTc5NjksImlhdCI6MTc4MDM3NDc2OSwibm9uY2UiOiJQQ3JielBtT1M2Q3NZeEd2VDJfeVNBIiwiYXRfaGFzaCI6IlBDcmJ6UG1PUzZDc1l4R3ZUMl95U0EiLCJuYW1lIjoiQW5vbnltb3VzIiwic2NvcGUiOiJhbm9ueW1vdXMiLCJwcm9qZWN0X2lkIjoiemhhbmdiZW4tMi1kOWdtZ2RscW4zNGRjNmQ0ZiIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJ1c2VyX3R5cGUiOiIiLCJjbGllbnRfdHlwZSI6ImNsaWVudF91c2VyIiwiaXNfc3lzdGVtX2FkbWluIjpmYWxzZX0.CUS20p1eu7XSm9sifZ-3b1Hb1ffcZNC9AiRPPnjZ_xOMlIfSPa6inVdKw8o14TEL6R6S1MzlEFDJGTX_UAHEv5MbfhLgLrDRtBqX_bA_SD3fkFOE4OdqeOoqgk88Vsq2_0JL6a5XY5JGi-ZBf2y2Nv_zEudCjYBzgzpaDhsiI3Kb8LB1XqKnNilxebOqqe0W7LqiqTFW3nf3RkTyb--F0M8guv3st_HAJ3ymiCWhUJTfWXHFWcjLNbW9rEPKlRzKYJ6J9d6a77QtMIOptN8sCez9h_I9lQElbBlnYPYyAyVsp5RNb4_O2tWX84FsvCg5EbWMOGjpkHYAcLG5BH8Upw',
+        'key': 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBpZCI6ImY1M2U5OGE2LWU3MmUtNDJhZi05ZDVjLTExMzMtMGM3ZWJkM2E4NWVhZSIsImVudiI6InpoYW5nYmVuLTItZDlnbWdkbHEzbjRkYzZkNGYiLCJpYXQiOjE3NDk5MzM1NTR9.fLGqVMqjb6qlp_alN5S-giH0L0qMlB35aJ8Upw',
         'version': 'v1',
       },
-      'timeout': 5000,
+      'timeout': 10000,
     });
+    debugPrint('[CloudBase] Core 初始化完成');
     _db = CloudBaseDatabase(_core);
     _auth = CloudBaseAuth(_core);
     _initialized = true;
+    debugPrint('[CloudBase] 初始化完成!');
   }
 
   CloudBaseDatabase get database => _db;
@@ -38,43 +42,77 @@ class CloudBaseService {
 
   // ========== Family ==========
   Future<String> createFamily(String name, String creatorId) async {
-    final res = await _db.collection('families').add({
-      'name': name,
-      'creatorId': creatorId,
-      'createdAt': DateTime.now().millisecondsSinceEpoch,
-      'monthlyBudget': 0.0,
-    });
-    return res.id ?? '';
+    debugPrint('[CloudBase] createFamily: name=$name creatorId=$creatorId');
+    try {
+      final res = await _db.collection('families').add({
+        'name': name,
+        'creatorId': creatorId,
+        'createdAt': DateTime.now().millisecondsSinceEpoch,
+        'monthlyBudget': 0.0,
+      });
+      debugPrint('[CloudBase] createFamily result: ${res.id}');
+      return res.id ?? '';
+    } catch (e) {
+      debugPrint('[CloudBase] createFamily ERROR: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateFamilyMonthlyBudget(String familyId, double budget) async {
+    debugPrint('[CloudBase] updateFamilyMonthlyBudget: $familyId budget=$budget');
     await _db.collection('families').doc(familyId).update({'monthlyBudget': budget});
   }
 
   // ========== Users ==========
   Future<void> createUser(String uid, String name, String gender) async {
-    await _db.collection('users').doc(uid).set({
-      'name': name,
-      'gender': gender,
-      'familyId': null as dynamic,
-      'createdAt': DateTime.now().millisecondsSinceEpoch,
-      'avatarUrl': null as dynamic,
-    });
+    debugPrint('[CloudBase] createUser: uid=$uid name=$name gender=$gender');
+    try {
+      await _db.collection('users').doc(uid).set({
+        'name': name,
+        'gender': gender,
+        'familyId': null,
+        'createdAt': DateTime.now().millisecondsSinceEpoch,
+        'avatarUrl': null,
+      });
+      debugPrint('[CloudBase] createUser success');
+    } catch (e) {
+      debugPrint('[CloudBase] createUser ERROR: $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> getUser(String uid) async {
-    final doc = await _db.collection('users').doc(uid).get();
-    return doc.data;
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      return doc.data;
+    } catch (e) {
+      debugPrint('[CloudBase] getUser ERROR: $e');
+      return null;
+    }
   }
 
   Future<void> updateUserFamily(String uid, String familyId) async {
-    await _db.collection('users').doc(uid).update({'familyId': familyId});
+    debugPrint('[CloudBase] updateUserFamily: uid=$uid familyId=$familyId');
+    try {
+      await _db.collection('users').doc(uid).update({'familyId': familyId});
+      debugPrint('[CloudBase] updateUserFamily success');
+    } catch (e) {
+      debugPrint('[CloudBase] updateUserFamily ERROR: $e');
+      rethrow;
+    }
   }
 
   // ========== Bills ==========
   Future<String> addBill(Map<String, dynamic> billData) async {
-    final res = await _db.collection('bills').add(billData);
-    return res.id ?? '';
+    debugPrint('[CloudBase] addBill: $billData');
+    try {
+      final res = await _db.collection('bills').add(billData);
+      debugPrint('[CloudBase] addBill result id: ${res.id}');
+      return res.id ?? '';
+    } catch (e) {
+      debugPrint('[CloudBase] addBill ERROR: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateBill(String billId, Map<String, dynamic> data) async {
@@ -112,8 +150,15 @@ class CloudBaseService {
 
   // ========== Settlements ==========
   Future<String> addSettlement(Map<String, dynamic> data) async {
-    final res = await _db.collection('settlements').add(data);
-    return res.id ?? '';
+    debugPrint('[CloudBase] addSettlement: $data');
+    try {
+      final res = await _db.collection('settlements').add(data);
+      debugPrint('[CloudBase] addSettlement result id: ${res.id}');
+      return res.id ?? '';
+    } catch (e) {
+      debugPrint('[CloudBase] addSettlement ERROR: $e');
+      rethrow;
+    }
   }
 
   RealtimeListener watchSettlements(String familyId) {
@@ -126,6 +171,7 @@ class CloudBaseService {
 
   // ========== Categories ==========
   Future<void> initDefaultCategories(String familyId) async {
+    debugPrint('[CloudBase] initDefaultCategories for $familyId');
     final cats = [
       {'id': 'meal', 'name': '餐饮', 'icon': '🍜', 'isDefault': true, 'isExpense': true},
       {'id': 'housing', 'name': '住房', 'icon': '🏠', 'isDefault': true, 'isExpense': true},
@@ -142,8 +188,13 @@ class CloudBaseService {
       {'id': 'other_inc', 'name': '其他收入', 'icon': '💵', 'isDefault': true, 'isExpense': false},
     ];
     for (final cat in cats) {
-      await _db.collection('categories').add({...cat, 'familyId': familyId});
+      try {
+        await _db.collection('categories').add({...cat, 'familyId': familyId});
+      } catch (e) {
+        debugPrint('[CloudBase] initDefaultCategories ERROR for ${cat['name']}: $e');
+      }
     }
+    debugPrint('[CloudBase] initDefaultCategories done');
   }
 
   RealtimeListener watchCategories(String familyId) {
