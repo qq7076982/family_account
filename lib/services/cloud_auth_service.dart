@@ -1,4 +1,5 @@
 import 'package:cloudbase_ce/cloudbase_ce.dart';
+import 'package:flutter/foundation.dart';
 
 class CloudAuthService {
   static CloudBaseAuth? _auth;
@@ -8,15 +9,17 @@ class CloudAuthService {
   }
 
   static Future<String?> signInAnonymously() async {
-    await _auth!.signInAnonymously();
+    final res = await _auth!.signInAnonymously();
     final state = await _auth!.getAuthState();
-    // The refresh token serves as the anonymous user identifier
-    return state?.refreshToken;
+    debugPrint('[CloudAuth] signInAnonymously - res: $res');
+    debugPrint('[CloudAuth] state: ${state?.uid} ${state?.refreshToken}');
+    return state?.uid;
   }
 
   static Future<String?> getCurrentUid() async {
     final state = await _auth?.getAuthState();
-    return state?.refreshToken;
+    debugPrint('[CloudAuth] getCurrentUid - state.uid: ${state?.uid}');
+    return state?.uid;
   }
 
   static Future<void> signOut() async {
