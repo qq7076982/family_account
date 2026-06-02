@@ -20,6 +20,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Gender _gender = Gender.husband;
   bool _isJoining = false;
   bool _loading = false;
+  String? _errorMessage;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -113,7 +114,34 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   ),
 
                   const SizedBox(height: 24),
-
+                  if (_errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.expense.withValues(alpha: 0.1),
+                        borderRadius: AppRadius.mdR,
+                        border: Border.all(color: AppColors.expense.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: AppColors.expense, size: 22),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: AppColors.expense, fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18, color: AppColors.expense),
+                            onPressed: () => setState(() => _errorMessage = null),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ),
                   // Form card
                   Expanded(
                     child: SingleChildScrollView(
@@ -380,14 +408,32 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       _showError('请输入你的昵称');
       return;
     }
-    setState(() => _loading = true);
-    final auth = context.read<AuthProvider>();
-    await auth.createFamilyAndJoin(
-      _familyNameController.text,
-      _nameController.text,
-      _gender == Gender.husband ? 'husband' : 'wife',
-    );
-    setState(() => _loading = false);
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+    try {
+      final auth = context.read<AuthProvider>();
+      await auth.createFamilyAndJoin(
+        _familyNameController.text,
+        _nameController.text,
+        _gender == Gender.husband ? 'husband' : 'wife',
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        final msg = e.toString();
+        if (msg.contains('anonymous') || msg.contains('signInAnonymously')) {
+          _showError('❌ 匿名登录失败：CloudBase 匿名访问未开启');
+        } else if (msg.contains('permission') || msg.contains('ADMINWRITE')) {
+          _showError('❌ 数据库权限不足：需设为所有人可读写');
+        } else if (msg.contains('network') || msg.contains('timeout')) {
+          _showError('❌ 网络连接失败：请检查网络后重试');
+        } else {
+          _showError('创建失败: $msg');
+        }
+      }
+    }
   }
 
   Future<void> _joinFamily() async {
@@ -406,12 +452,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   void _showError(String msg) {
+    if (!mounted) return;
+    setState(() => _errorMessage = msg);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
         backgroundColor: AppColors.expense,
+        duration: const Duration(seconds: 4),
       ),
     );
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _errorMessage = null);
+    });
   }
 }
 
