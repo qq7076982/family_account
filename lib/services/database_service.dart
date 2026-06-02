@@ -68,6 +68,7 @@ class DatabaseHelper {
             category_id TEXT NOT NULL,
             category_name TEXT,
             amount REAL NOT NULL,
+            type TEXT NOT NULL,
             note TEXT,
             date INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
@@ -240,6 +241,7 @@ class DatabaseHelper {
     required String categoryName,
     required double amount,
     required DateTime date,
+    required String type,
     String? note,
   }) async {
     final id = 'bill_${DateTime.now().millisecondsSinceEpoch}';
@@ -251,12 +253,13 @@ class DatabaseHelper {
       'category_id': categoryId,
       'category_name': categoryName,
       'amount': amount,
+      'type': type,
       'note': note ?? '',
       'date': date.millisecondsSinceEpoch,
       'created_at': now,
       'is_deleted': 0,
     });
-    debugPrint('[DB] 创建账单: ¥$amount, 分类: $categoryName($categoryId), ID: $id');
+    debugPrint('[DB] 创建账单: ¥$amount, 分类: $categoryName($categoryId), 类型: $type, ID: $id');
     return id;
   }
 
@@ -305,6 +308,11 @@ class DatabaseHelper {
       'created_at': now,
     });
     debugPrint('[DB] 新增分类: $name $emoji, ID: $id');
+  }
+
+  Future<void> deleteCategory(String categoryId) async {
+    await db.delete('categories', where: 'id = ?', whereArgs: [categoryId]);
+    debugPrint('[DB] 删除分类: $categoryId');
   }
   Future<void> setBudget(String familyId, String? categoryId, double amount, String month) async {
     final id = 'bud_${DateTime.now().millisecondsSinceEpoch}';
@@ -363,6 +371,11 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getSettlementsByFamily(String familyId) async {
     return await db.query('settlements', where: 'family_id = ?', whereArgs: [familyId], orderBy: 'settled_at DESC');
+  }
+
+  Future<void> deleteSettlement(String settlementId) async {
+    await db.delete('settlements', where: 'id = ?', whereArgs: [settlementId]);
+    debugPrint('[DB] 删除结算记录: $settlementId');
   }
 
   // ========== Stats ==========

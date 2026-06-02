@@ -381,11 +381,11 @@ class _CategoryManagerSheet extends StatelessWidget {
               children: [
                 const Text('💸 支出分类', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textTertiary)),
                 const SizedBox(height: 10),
-                ...bp.expenseCategories.map((c) => _CategoryTile(icon: c.icon, name: c.name, isDefault: c.isDefault)),
+                ...bp.expenseCategories.map((c) => _CategoryTile(icon: c.icon, name: c.name, isDefault: c.isDefault, categoryId: c.id, onDelete: c.isDefault ? null : () => _deleteCategory(context, c.id, c.name))),
                 const SizedBox(height: 20),
                 const Text('💰 收入分类', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textTertiary)),
                 const SizedBox(height: 10),
-                ...bp.incomeCategories.map((c) => _CategoryTile(icon: c.icon, name: c.name, isDefault: c.isDefault)),
+                ...bp.incomeCategories.map((c) => _CategoryTile(icon: c.icon, name: c.name, isDefault: c.isDefault, categoryId: c.id, onDelete: c.isDefault ? null : () => _deleteCategory(context, c.id, c.name))),
                 const SizedBox(height: 40),
               ],
             );
@@ -442,12 +442,36 @@ class _CategoryManagerSheet extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _deleteCategory(BuildContext context, String categoryId, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlR),
+        title: const Text('删除分类'),
+        content: Text('确定要删除分类「$name」吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, shape: RoundedRectangleBorder(borderRadius: AppRadius.mdR)),
+            child: const Text('删除', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<BillProvider>().deleteCategory(categoryId);
+    }
+  }
 }
 
 class _CategoryTile extends StatelessWidget {
   final String icon, name;
   final bool isDefault;
-  const _CategoryTile({required this.icon, required this.name, this.isDefault = false});
+  final String categoryId;
+  final VoidCallback? onDelete;
+  const _CategoryTile({required this.icon, required this.name, this.isDefault = false, required this.categoryId, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -465,6 +489,13 @@ class _CategoryTile extends StatelessWidget {
             decoration: BoxDecoration(color: AppColors.textDisabled.withValues(alpha: 0.2), borderRadius: AppRadius.fullR),
             child: const Text('默认', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
           ),
+          if (!isDefault && onDelete != null)
+            IconButton(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.expense),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
         ]),
       ),
     );

@@ -20,15 +20,16 @@ class Settlement {
   });
 
   factory Settlement.fromMap(Map<String, dynamic> data, String id) {
+    int _int(dynamic v) => v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
     return Settlement(
       id: id,
       familyId: data['familyId'] ?? '',
       amount: (data['amount'] ?? 0).toDouble(),
       fromUserId: data['fromUserId'] ?? '',
       toUserId: data['toUserId'] ?? '',
-      date: DateTime.fromMillisecondsSinceEpoch(data['date'] ?? 0),
+      date: DateTime.fromMillisecondsSinceEpoch(_int(data['settledAt'] ?? data['settled_at'])),
       note: data['note'],
-      createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] ?? 0),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(_int(data['createdAt'] ?? data['created_at'])),
     );
   }
 

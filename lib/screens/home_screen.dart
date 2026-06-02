@@ -6,6 +6,7 @@ import '../models/bill.dart';
 import '../utils/utils.dart';
 import '../utils/app_theme.dart';
 import 'add_bill_screen.dart';
+import 'edit_bill_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -541,15 +542,18 @@ class _BillCardView extends StatelessWidget {
     IconData payerIcon = Icons.favorite;
     Color payerColor = AppColors.expense;
     if (bill.payType == PayType.husband) {
-      payer = '老公';
+      payer = '👨老公';
       payerIcon = Icons.person;
       payerColor = const Color(0xFF6679EE);
     }
     if (bill.payType == PayType.wife) {
-      payer = '老婆';
+      payer = '👩老婆';
       payerIcon = Icons.person;
       payerColor = const Color(0xFFFF7F50);
     }
+
+    final typeLabel = isExpense ? '支出' : '收入';
+    final categoryDisplay = bill.categoryName ?? bill.category;
 
     return Dismissible(
       key: Key(bill.id),
@@ -591,74 +595,98 @@ class _BillCardView extends StatelessWidget {
         ),
         child: const Icon(Icons.delete_outline, color: AppColors.expense, size: 24),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: AppRadius.mdR,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: (isExpense ? AppColors.expense : AppColors.income).withValues(alpha: 0.12),
-                borderRadius: AppRadius.mdR,
+      child: GestureDetector(
+        onTap: () => _openEditBill(context, bill),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: AppRadius.mdR,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-              child: Icon(
-                isExpense ? Icons.arrow_downward : Icons.arrow_upward,
-                color: color,
-                size: 22,
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: (isExpense ? AppColors.expense : AppColors.income).withValues(alpha: 0.12),
+                  borderRadius: AppRadius.mdR,
+                ),
+                child: Icon(
+                  isExpense ? Icons.arrow_downward : Icons.arrow_upward,
+                  color: color,
+                  size: 22,
+                ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$payer-$typeLabel-$categoryDisplay',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(payerIcon, size: 13, color: payerColor.withValues(alpha: 0.7)),
+                        const SizedBox(width: 3),
+                        Text(payer, style: TextStyle(fontSize: 12, color: payerColor.withValues(alpha: 0.8), fontWeight: FontWeight.w500)),
+                        const SizedBox(width: 8),
+                        Container(width: 3, height: 3, decoration: BoxDecoration(color: AppColors.textDisabled, borderRadius: BorderRadius.circular(2))),
+                        const SizedBox(width: 8),
+                        Text(Utils.formatRelativeDate(bill.date), style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    bill.categoryName ?? bill.category,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                    '$prefix${Utils.formatMoney(bill.amount)}',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(payerIcon, size: 13, color: payerColor.withValues(alpha: 0.7)),
-                      const SizedBox(width: 3),
-                      Text(payer, style: TextStyle(fontSize: 12, color: payerColor.withValues(alpha: 0.8), fontWeight: FontWeight.w500)),
-                      const SizedBox(width: 8),
-                      Container(width: 3, height: 3, decoration: BoxDecoration(color: AppColors.textDisabled, borderRadius: BorderRadius.circular(2))),
-                      const SizedBox(width: 8),
-                      Text(Utils.formatRelativeDate(bill.date), style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                    ],
-                  ),
+                  if (bill.note != null && bill.note!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(bill.note!, style: const TextStyle(fontSize: 11, color: AppColors.textDisabled), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '$prefix${Utils.formatMoney(bill.amount)}',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
-                ),
-                if (bill.note != null && bill.note!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(bill.note!, style: const TextStyle(fontSize: 11, color: AppColors.textDisabled), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  void _openEditBill(BuildContext context, Bill bill) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => EditBillScreen(bill: bill),
+        transitionsBuilder: (_, anim, __, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: anim,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          );
+        },
       ),
     );
   }

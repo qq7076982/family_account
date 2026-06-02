@@ -89,6 +89,7 @@ class BillProvider extends ChangeNotifier {
       categoryId: categoryId,
       categoryName: catName,
       amount: amount,
+      type: type == BillType.income ? 'income' : 'expense',
       date: date,
       note: note,
     );
@@ -153,6 +154,11 @@ class BillProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteSettlement(String settlementId) async {
+    await _db!.deleteSettlement(settlementId);
+    await loadSettlements();
+  }
+
   Future<void> setBudget(double totalBudget, Map<String, double> categoryBudgets, int month, int year) async {
     if (_familyId == null) return;
 
@@ -186,6 +192,12 @@ class BillProvider extends ChangeNotifier {
     if (_familyId == null) return;
     final type = isExpense ? 'expense' : 'income';
     await _db!.addCategory(_familyId!, name, emoji, type, color);
+    await _loadCategories();
+  }
+
+  Future<void> deleteCategory(String categoryId) async {
+    if (_familyId == null) return;
+    await _db!.deleteCategory(categoryId);
     await _loadCategories();
   }
 

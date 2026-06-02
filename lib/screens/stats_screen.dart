@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
+import '../models/budget.dart';
 import '../utils/utils.dart';
 import '../utils/app_theme.dart';
 
@@ -156,6 +157,11 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
               _CategoryList(
                 sortedCats: sortedCats,
                 totalExpense: totalExpense,
+                budget: bp.budget,
+                getCategoryIcon: (name) {
+                  final cat = bp.categories.where((c) => c.name == name).firstOrNull;
+                  return cat?.icon;
+                },
               ),
 
               const SizedBox(height: 100),
@@ -515,10 +521,14 @@ class _PieChartCardState extends State<_PieChartCard> {
 class _CategoryList extends StatelessWidget {
   final List<MapEntry<String, double>> sortedCats;
   final double totalExpense;
+  final Budget? budget;
+  final String? Function(String catName) getCategoryIcon;
 
   const _CategoryList({
     required this.sortedCats,
     required this.totalExpense,
+    this.budget,
+    required this.getCategoryIcon,
   });
 
   @override
@@ -581,7 +591,7 @@ class _CategoryList extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      '📁',
+                      getCategoryIcon(entry.key) ?? '📁',
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
@@ -599,7 +609,7 @@ class _CategoryList extends StatelessWidget {
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       ClipRRect(
                         borderRadius: AppRadius.r(3),
                         child: LinearProgressIndicator(
@@ -611,6 +621,16 @@ class _CategoryList extends StatelessWidget {
                           minHeight: 5,
                         ),
                       ),
+                      if (budget != null && budget!.categoryBudgets.containsKey(entry.key)) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '预算: ${Utils.formatMoney(budget!.categoryBudgets[entry.key]!)} | 剩余: ${Utils.formatMoney((budget!.categoryBudgets[entry.key] ?? 0) - entry.value)}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -82,7 +82,13 @@ class _AccountScreenState extends State<AccountScreen> {
             else
               ...bp.settlements.map((s) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: _SettlementItemCard(settlement: s),
+                    child: _SettlementItemCard(
+                      settlement: s,
+                      onDelete: () async {
+                        await context.read<BillProvider>().deleteSettlement(s.id);
+                        if (context.mounted) context.read<BillProvider>().loadSettlements();
+                      },
+                    ),
                   )),
 
             const SizedBox(height: 100),
@@ -454,72 +460,114 @@ class _SettlementLogic extends StatelessWidget {
 
 class _SettlementItemCard extends StatelessWidget {
   final Settlement settlement;
+  final VoidCallback onDelete;
 
-  const _SettlementItemCard({required this.settlement});
+  const _SettlementItemCard({required this.settlement, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: AppRadius.mdR,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppColors.income.withValues(alpha: 0.1),
-              borderRadius: AppRadius.mdR,
-            ),
-            child: const Center(
-              child: Text('✅', style: TextStyle(fontSize: 22)),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  Utils.formatMoney(settlement.amount),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
+    return Dismissible(
+      key: Key(settlement.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.xlR),
+            title: const Text('删除结算'),
+            content: const Text('确定要删除这条结算记录吗？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.expense,
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.mdR),
                 ),
-                if (settlement.note != null && settlement.note!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      settlement.note!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary,
-                      ),
+                child: const Text('删除', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true && context.mounted) {
+          await context.read<BillProvider>().deleteSettlement(settlement.id);
+        }
+        return confirmed ?? false;
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: AppColors.expense.withValues(alpha: 0.15),
+          borderRadius: AppRadius.mdR,
+        ),
+        child: const Icon(Icons.delete_outline, color: AppColors.expense, size: 24),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: AppRadius.mdR,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppColors.income.withValues(alpha: 0.1),
+                borderRadius: AppRadius.mdR,
+              ),
+              child: const Center(
+                child: Text('✅', style: TextStyle(fontSize: 22)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    Utils.formatMoney(settlement.amount),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-              ],
+                  if (settlement.note != null && settlement.note!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        settlement.note!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          Text(
-            Utils.formatRelativeDate(settlement.date),
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textTertiary,
+            Text(
+              Utils.formatRelativeDate(settlement.date),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
