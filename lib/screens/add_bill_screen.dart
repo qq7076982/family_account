@@ -70,15 +70,21 @@ class _AddBillScreenState extends State<AddBillScreen>
     final auth = context.read<AuthProvider>();
     final bp = context.read<BillProvider>();
 
+    // 找到分类 ID
+    final allCats = [...bp.expenseCategories, ...bp.incomeCategories];
+    final cat = allCats.firstWhere(
+      (c) => c.name == _category || c.icon == _category,
+      orElse: () => allCats.first,
+    );
+
     await bp.addBill(
-      familyId: auth.user!.familyId!,
-      type: _type,
+      userId: auth.user!.id,
+      categoryId: cat.id,
       amount: amount,
-      category: _category!,
-      payType: _payType,
       date: _date,
       note: _noteController.text.isEmpty ? null : _noteController.text,
-      creatorId: auth.user!.id,
+      type: _type,
+      payType: _payType,
     );
 
     setState(() => _saving = false);

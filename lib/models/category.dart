@@ -2,6 +2,7 @@ class Category {
   final String id;
   final String name;
   final String icon;
+  final String? color;
   final bool isDefault;
   final bool isExpense;
 
@@ -9,17 +10,22 @@ class Category {
     required this.id,
     required this.name,
     required this.icon,
+    this.color,
     this.isDefault = false,
     this.isExpense = true,
   });
 
   factory Category.fromMap(Map<String, dynamic> data, String id) {
+    String? _str(Map d, String key) => d[key]?.toString();
+    final iconVal = _str(data, 'icon') ?? _str(data, 'emoji') ?? '📦';
+    final isExpenseVal = data['isExpense'] ?? data['is_expense'] ?? true;
     return Category(
       id: id,
-      name: data['name'] ?? '',
-      icon: data['icon'] ?? '📦',
-      isDefault: data['isDefault'] ?? false,
-      isExpense: data['isExpense'] ?? true,
+      name: _str(data, 'name') ?? '',
+      icon: iconVal,
+      color: _str(data, 'color'),
+      isDefault: data['isDefault'] == true || data['is_default'] == 1,
+      isExpense: isExpenseVal is bool ? isExpenseVal : (isExpenseVal == 'expense'),
     );
   }
 
@@ -27,6 +33,7 @@ class Category {
     return {
       'name': name,
       'icon': icon,
+      'color': color,
       'isDefault': isDefault,
       'isExpense': isExpense,
     };

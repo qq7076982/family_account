@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
-import '../services/cloud_auth_service.dart';
-import '../services/cloudbase_service.dart';
+import '../services/database_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   AppUser? _user;
   bool _loading = true;
   String? _error;
+  DatabaseHelper? _db;
 
   AppUser? get user => _user;
   bool get loading => _loading;
@@ -20,16 +21,23 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final cs = await CloudBaseService.getInstance();
-      await CloudAuthService.init(cs.auth);
+      final db = await DatabaseHelper.getInstance();
+      _db = db;
 
-      final uid = await CloudAuthService.getCurrentUid();
-      debugPrint('[AuthProvider] init uid: $uid');
+      // 从 SharedPreferences 加载当前用户
+      final prefs = await SharedPreferences.getInstance();
+      final uid = prefs.getString('current_user_id');
       if (uid != null) {
-        final data = await cs.getUser(uid);
+        final data = await db.getUser(uid);
         if (data != null) {
-          _user = AppUser.fromMap(data, uid);
-          debugPrint('[AuthProvider] init user loaded: ${_user?.name}');
+          _user = AppUser(
+            id: uid,
+            name: data['name'] as String,
+            avatarUrl: null,
+            gender: data['gender'] == 'wife' ? Gender.wife : Gender.husband,
+            familyId: data['family_id'] as String?,
+            createdAt: DateTime.fromMillisecondsSinceEpoch(data['created_at'] as int),
+          );
         }
       }
     } catch (e) {
@@ -41,74 +49,38 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> signInAnon() async {
-    debugPrint('[AuthProvider] signInAnon called');
-    try {
-      final cs = await CloudBaseService.getInstance();
-      await CloudAuthService.init(cs.auth);
-      final uid = await CloudAuthService.signInAnonymously();
-      debugPrint('[AuthProvider] signInAnon result uid: $uid');
-      if (uid != null) {
-        _user = AppUser(
-          id: uid,
-          name: '用户',
-          avatarUrl: null,
-          gender: Gender.husband,
-          createdAt: DateTime.now(),
-        );
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('[AuthProvider] signInAnon error: $e');
-      rethrow;
-    }
-  }
-
   Future<String?> createFamilyAndJoin(String familyName, String myName, String myGender) async {
     _error = null;
-    debugPrint('[AuthProvider] createFamilyAndJoin called: familyName=$familyName myName=$myName');
+    debugPrint('[AuthProvider] createFamilyAndJoin: familyName=$familyName myName=$myName gender=$myGender');
 
     try {
-      // Step 1: 获取 CloudBase 实例
-      debugPrint('[AuthProvider] Step1: 初始化 CloudBase...');
-      final cs = await CloudBaseService.getInstance();
-      await CloudAuthService.init(cs.auth);
-      debugPrint('[AuthProvider] Step1: CloudBase 初始化完成');
+      final db = _db ?? await DatabaseHelper.getInstance();
 
-      // Step 2: 确保匿名登录
-      debugPrint('[AuthProvider] Step2: 执行匿名登录...');
-      var uid = await CloudAuthService.signInAnonymously();
-      debugPrint('[AuthProvider] Step2: 匿名登录完成, uid=$uid');
+      // 创建账本
+      final familyId = await db.createFamily(familyName, 'local_user');
 
-      if (uid == null) {
-        throw Exception('匿名登录失败，返回的 uid 为空');
-      }
+      // 初始化该账本的分类
+      await db.initCategoriesForFamily(familyId);
 
-      // Step 3: 创建账本
-      debugPrint('[AuthProvider] Step3: 创建账本...');
-      final familyId = await cs.createFamily(familyName, uid);
-      debugPrint('[AuthProvider] Step3: 账本创建成功, familyId=$familyId');
+      // 创建用户
+      final userId = await db.createUser(familyId, myName, myGender);
 
-      // Step 4: 创建用户记录
-      debugPrint('[AuthProvider] Step4: 创建用户记录...');
-      await cs.createUser(uid, myName, myGender);
-      debugPrint('[AuthProvider] Step4: 用户记录创建成功');
+      // 保存当前用户
+      _user = AppUser(
+        id: userId,
+        name: myName,
+        avatarUrl: null,
+        gender: myGender == 'wife' ? Gender.wife : Gender.husband,
+        familyId: familyId,
+        createdAt: DateTime.now(),
+      );
 
-      // Step 5: 关联用户和账本
-      debugPrint('[AuthProvider] Step5: 关联用户和账本...');
-      await cs.updateUserFamily(uid, familyId);
-      debugPrint('[AuthProvider] Step5: 关联成功');
+      // 持久化
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('current_user_id', userId);
+      await prefs.setString('current_family_id', familyId);
 
-      // Step 6: 初始化默认分类
-      debugPrint('[AuthProvider] Step6: 初始化默认分类...');
-      await cs.initDefaultCategories(familyId);
-      debugPrint('[AuthProvider] Step6: 默认分类初始化成功');
-
-      // Step 7: 刷新用户数据
-      debugPrint('[AuthProvider] Step7: 刷新用户数据...');
-      await refreshUser();
-      debugPrint('[AuthProvider] Step7: 完成! familyId=$familyId');
-
+      notifyListeners();
       return familyId;
     } catch (e) {
       _error = '创建失败: $e';
@@ -118,28 +90,43 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String> joinFamily(String familyId, String myName, String myGender) async {
+  Future<String> joinFamily(String joinCode, String myName, String myGender) async {
     _error = null;
-    debugPrint('[AuthProvider] joinFamily called: familyId=$familyId');
+    debugPrint('[AuthProvider] joinFamily: code=$joinCode myName=$myName');
 
     try {
-      final cs = await CloudBaseService.getInstance();
-      await CloudAuthService.init(cs.auth);
+      final db = _db ?? await DatabaseHelper.getInstance();
 
-      var uid = await CloudAuthService.signInAnonymously();
-      debugPrint('[AuthProvider] joinFamily: uid=$uid');
-
-      if (uid == null) {
-        throw Exception('匿名登录失败');
+      // 通过邀请码查找账本
+      final family = await db.getFamilyByJoinCode(joinCode.toUpperCase());
+      if (family == null) {
+        throw Exception('邀请码无效，找不到对应的账本');
       }
 
-      await cs.createUser(uid, myName, myGender);
-      await cs.updateUserFamily(uid, familyId);
-      await refreshUser();
+      final familyId = family['id'] as String;
+
+      // 创建用户
+      final userId = await db.createUser(familyId, myName, myGender);
+
+      // 保存当前用户
+      _user = AppUser(
+        id: userId,
+        name: myName,
+        avatarUrl: null,
+        gender: myGender == 'wife' ? Gender.wife : Gender.husband,
+        familyId: familyId,
+        createdAt: DateTime.now(),
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('current_user_id', userId);
+      await prefs.setString('current_family_id', familyId);
+
+      notifyListeners();
       return familyId;
     } catch (e) {
       _error = '加入失败: $e';
-      debugPrint('[AuthProvider] joinFamily error: $e');
+      debugPrint('[AuthProvider] joinFamily ERROR: $e');
       notifyListeners();
       rethrow;
     }
@@ -147,12 +134,21 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> refreshUser() async {
     try {
-      final cs = await CloudBaseService.getInstance();
-      final uid = await CloudAuthService.getCurrentUid();
+      final prefs = await SharedPreferences.getInstance();
+      final uid = prefs.getString('current_user_id');
       if (uid == null) return;
-      final data = await cs.getUser(uid);
+
+      final db = _db ?? await DatabaseHelper.getInstance();
+      final data = await db.getUser(uid);
       if (data != null) {
-        _user = AppUser.fromMap(data, uid);
+        _user = AppUser(
+          id: uid,
+          name: data['name'] as String,
+          avatarUrl: null,
+          gender: data['gender'] == 'wife' ? Gender.wife : Gender.husband,
+          familyId: data['family_id'] as String?,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(data['created_at'] as int),
+        );
         notifyListeners();
       }
     } catch (e) {
@@ -161,8 +157,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    await CloudAuthService.signOut();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('current_user_id');
     _user = null;
     notifyListeners();
   }
+
+  String? get currentFamilyId => _user?.familyId;
 }

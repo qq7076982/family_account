@@ -23,7 +23,7 @@ class _AccountScreenState extends State<AccountScreen> {
   void _loadData() {
     final auth = context.read<AuthProvider>();
     if (auth.user?.familyId != null) {
-      context.read<BillProvider>().watchSettlements(auth.user!.familyId!);
+      context.read<BillProvider>().loadSettlements();
     }
   }
 
@@ -166,10 +166,9 @@ class _AccountScreenState extends State<AccountScreen> {
             onPressed: () async {
               final bp = context.read<BillProvider>();
               await bp.addSettlement(
-                familyId: auth.user!.familyId!,
-                amount: diff.abs(),
                 fromUserId: diff > 0 ? auth.user!.id : 'other',
                 toUserId: diff > 0 ? 'other' : auth.user!.id,
+                amount: diff.abs(),
                 note: noteController.text.isEmpty ? null : noteController.text,
               );
               if (ctx.mounted) Navigator.pop(ctx);

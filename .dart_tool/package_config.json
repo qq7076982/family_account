@@ -50,12 +50,6 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "cloudbase_ce",
-      "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/cloudbase_ce-2.1.4",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
       "name": "code_assets",
       "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/code_assets-1.2.1",
       "packageUri": "lib/",
@@ -96,18 +90,6 @@
       "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/dbus-0.7.12",
       "packageUri": "lib/",
       "languageVersion": "2.17"
-    },
-    {
-      "name": "dio",
-      "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/dio-5.9.2",
-      "packageUri": "lib/",
-      "languageVersion": "2.18"
-    },
-    {
-      "name": "dio_web_adapter",
-      "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/dio_web_adapter-2.1.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.3"
     },
     {
       "name": "equatable",
@@ -398,18 +380,6 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "package_info_plus",
-      "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/package_info_plus-4.2.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.18"
-    },
-    {
-      "name": "package_info_plus_platform_interface",
-      "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/package_info_plus_platform_interface-2.0.1",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
       "name": "path",
       "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/path-1.9.1",
       "packageUri": "lib/",
@@ -648,12 +618,6 @@
       "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/web-1.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
-    },
-    {
-      "name": "win32",
-      "rootUri": "file:///Users/xie/.pub-cache/hosted/pub.dev/win32-5.15.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.8"
     },
     {
       "name": "xdg_directories",

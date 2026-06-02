@@ -18,13 +18,19 @@ class AppUser {
   });
 
   factory AppUser.fromMap(Map<String, dynamic> data, String id) {
+    String? _str(Map d, String key) => d[key]?.toString();
+    int _int(dynamic v) => v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
+
+    final genderStr = _str(data, 'gender') ?? _str(data, 'gender');
+    final familyIdVal = data['familyId'] ?? data['family_id'];
+
     return AppUser(
       id: id,
-      name: data['name'] ?? '',
-      avatarUrl: data['avatarUrl'],
-      gender: data['gender'] == 'husband' ? Gender.husband : Gender.wife,
-      familyId: data['familyId'],
-      createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] ?? 0),
+      name: _str(data, 'name') ?? '',
+      avatarUrl: data['avatarUrl']?.toString() ?? data['avatar_url']?.toString(),
+      gender: genderStr == 'wife' ? Gender.wife : Gender.husband,
+      familyId: familyIdVal?.toString(),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(_int(data['createdAt'] ?? data['created_at'])),
     );
   }
 

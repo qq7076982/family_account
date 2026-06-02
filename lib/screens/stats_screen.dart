@@ -43,11 +43,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
   void _loadData() {
     final auth = context.read<AuthProvider>();
     if (auth.user?.familyId != null) {
-      context.read<BillProvider>().loadMonthlyBills(
-            auth.user!.familyId!,
-            _selectedYear,
-            _selectedMonth,
-          );
+      context.read<BillProvider>().loadMonthlyBills(_selectedYear, _selectedMonth);
     }
   }
 
@@ -66,11 +62,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     _animController.forward();
     final auth = context.read<AuthProvider>();
     if (auth.user?.familyId != null) {
-      context.read<BillProvider>().loadMonthlyBills(
-            auth.user!.familyId!,
-            _selectedYear,
-            _selectedMonth,
-          );
+      context.read<BillProvider>().loadMonthlyBills(_selectedYear, _selectedMonth);
     }
   }
 

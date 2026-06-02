@@ -39,7 +39,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     if (auth.user?.familyId != null) {
       final bp = context.read<BillProvider>();
       final now = DateTime.now();
-      bp.loadBudget(auth.user!.familyId!, now.month, now.year);
+      bp.loadBudget(now.month, now.year);
     }
   }
 
@@ -123,13 +123,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     final budget = double.tryParse(_totalController.text) ?? 0;
     final now = DateTime.now();
 
-    await bp.setBudget(
-      auth.user!.familyId!,
-      budget,
-      {},
-      now.month,
-      now.year,
-    );
+    await bp.setBudget(budget, {}, now.month, now.year);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,13 +146,7 @@ class _BudgetScreenState extends State<BudgetScreen>
       if (val > 0) catBudgets[entry.key] = val;
     }
 
-    await bp.setBudget(
-      auth.user!.familyId!,
-      bp.budget?.totalBudget ?? 0,
-      catBudgets,
-      now.month,
-      now.year,
-    );
+    await bp.setBudget(bp.budget?.totalBudget ?? 0, catBudgets, now.month, now.year);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

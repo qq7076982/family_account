@@ -422,16 +422,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        final msg = e.toString();
-        if (msg.contains('anonymous') || msg.contains('signInAnonymously')) {
-          _showError('❌ 匿名登录失败：CloudBase 匿名访问未开启');
-        } else if (msg.contains('permission') || msg.contains('ADMINWRITE')) {
-          _showError('❌ 数据库权限不足：需设为所有人可读写');
-        } else if (msg.contains('network') || msg.contains('timeout')) {
-          _showError('❌ 网络连接失败：请检查网络后重试');
-        } else {
-          _showError('创建失败: $msg');
-        }
+        _showError('创建失败: $e');
       }
     }
   }

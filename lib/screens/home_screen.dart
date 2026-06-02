@@ -25,11 +25,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.user?.familyId != null) {
       final bp = context.read<BillProvider>();
-      bp.watchBills(auth.user!.familyId!);
-      bp.watchCategories(auth.user!.familyId!);
+      bp.init(auth.user!.familyId!);
       final now = DateTime.now();
-      bp.loadMonthlyBills(auth.user!.familyId!, now.year, now.month);
-      bp.loadBudget(auth.user!.familyId!, now.month, now.year);
+      bp.loadMonthlyBills(now.year, now.month);
+      bp.loadBudget(now.month, now.year);
     }
   }
 

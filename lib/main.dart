@@ -4,12 +4,9 @@ import 'providers/auth_provider.dart';
 import 'providers/bill_provider.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_navigator.dart';
-import 'services/cloudbase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // 初始化腾讯云开发 CloudBase
-  await CloudBaseService.getInstance();
   runApp(const FamilyAccountApp());
 }
 

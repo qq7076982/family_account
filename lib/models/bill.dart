@@ -29,21 +29,33 @@ class Bill {
   });
 
   factory Bill.fromMap(Map<String, dynamic> data, String id) {
-    final typeStr = data['type'] as String? ?? 'expense';
-    final payTypeStr = data['payType'] as String? ?? 'shared';
+    // 支持 camelCase (CloudBase) 和 snake_case (SQLite)
+    String _val(dynamic v) => v?.toString() ?? '';
+    String? _str(Map d, String key) {
+      final v = d[key] ?? d[key.replaceAllMapped(RegExp(r'_[a-z]'), (m) => m.group(0)!.substring(1).toUpperCase())];
+      return v?.toString();
+    }
+    int _int(dynamic v) => v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
+    double _double(dynamic v) => v is double ? v : double.tryParse(v?.toString() ?? '0') ?? 0.0;
+
+    final typeStr = _str(data, 'type') ?? 'expense';
+    final payTypeStr = _str(data, 'payType') ?? 'shared';
+
+    // category 可能是 id 或 name
+    final catVal = data['category'] ?? data['category_id'] ?? '';
 
     return Bill(
       id: id,
-      familyId: data['familyId'] ?? '',
+      familyId: _str(data, 'familyId') ?? _str(data, 'family_id') ?? '',
       type: typeStr == 'income' ? BillType.income : BillType.expense,
-      amount: (data['amount'] ?? 0).toDouble(),
-      category: data['category'] ?? '',
+      amount: _double(data['amount'] ?? data['amount']),
+      category: catVal.toString(),
       payType: _parsePayType(payTypeStr),
-      date: DateTime.fromMillisecondsSinceEpoch(data['date'] ?? 0),
-      note: data['note'],
-      creatorId: data['creatorId'] ?? '',
-      isSettled: data['isSettled'] ?? false,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] ?? 0),
+      date: DateTime.fromMillisecondsSinceEpoch(_int(data['date'] ?? data['date'])),
+      note: data['note']?.toString(),
+      creatorId: _str(data, 'creatorId') ?? _str(data, 'creator_id') ?? '',
+      isSettled: data['isSettled'] == true || data['isSettled'] == 1,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(_int(data['createdAt'] ?? data['created_at'])),
     );
   }
 
