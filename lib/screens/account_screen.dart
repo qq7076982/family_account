@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
 import '../models/settlement.dart';
 import '../utils/utils.dart';
+import '../utils/app_theme.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -29,11 +30,14 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('对账结算'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF333333),
+        backgroundColor: AppColors.background,
+        title: const Text(
+          '对账结算',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
         elevation: 0,
       ),
       body: Consumer<BillProvider>(builder: (context, bp, _) {
@@ -42,169 +46,46 @@ class _AccountScreenState extends State<AccountScreen> {
         final diff = husbandExpense - wifeExpense;
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
           children: [
-            // 垫付差额卡片
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    '本月垫付差额',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        children: [
-                          const Text('老公', style: TextStyle(fontSize: 13, color: Color(0xFF999999))),
-                          const SizedBox(height: 4),
-                          Text(
-                            Utils.formatMoney(husbandExpense),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF6679EE),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24),
-                        child: Text('—', style: TextStyle(fontSize: 24, color: Color(0xFFCCCCCC))),
-                      ),
-                      Column(
-                        children: [
-                          const Text('老婆', style: TextStyle(fontSize: 13, color: Color(0xFF999999))),
-                          const SizedBox(height: 4),
-                          Text(
-                            Utils.formatMoney(wifeExpense),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF7F50),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: diff > 0
-                          ? const Color(0xFFFF6B6B).withOpacity(0.1)
-                          : diff < 0
-                              ? const Color(0xFF52C41A).withOpacity(0.1)
-                              : const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      diff > 0
-                          ? '老公多垫了 ${Utils.formatMoney(diff)}，老婆需要还给他'
-                          : diff < 0
-                              ? '老婆多垫了 ${Utils.formatMoney(-diff)}，老公需要还给她'
-                              : '已结清，互不相欠',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: diff > 0
-                            ? const Color(0xFFFF6B6B)
-                            : diff < 0
-                                ? const Color(0xFF52C41A)
-                                : const Color(0xFF999999),
-                        fontWeight: diff == 0 ? FontWeight.normal : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            // Balance overview
+            _SettlementCard(
+              husbandExpense: husbandExpense,
+              wifeExpense: wifeExpense,
+              diff: diff,
+              onSettle: diff.abs() > 0.01 ? () => _showSettleDialog(diff) : null,
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // 快速结算按钮
-            if (diff.abs() > 0.01)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+            // Settlement logic explanation
+            if (diff.abs() > 0.01) ...[
+              _SettlementLogic(diff: diff),
+              const SizedBox(height: 20),
+            ],
+
+            // Settlement history
+            Row(
+              children: [
+                const Text('💰 ', style: TextStyle(fontSize: 16)),
+                const Text(
+                  '结算记录',
+                  style: AppTextStyles.sectionTitle,
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.swap_horiz, color: Color(0xFF6679EE)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        diff > 0
-                            ? '老婆 转给老公 ${Utils.formatMoney(diff)}'
-                            : '老公 转给老婆 ${Utils.formatMoney(-diff)}',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => _showSettleDialog(diff),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6679EE),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text('确认结算'),
-                    ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 24),
-
-            // 结算记录
-            const Text(
-              '结算记录',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
-              ),
+              ],
             ),
             const SizedBox(height: 12),
 
             if (bp.settlements.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.history, size: 40, color: Color(0xFFCCCCCC)),
-                      SizedBox(height: 8),
-                      Text('暂无结算记录', style: TextStyle(color: Color(0xFF999999))),
-                    ],
-                  ),
-                ),
-              )
+              _EmptySettlements()
             else
-              ...bp.settlements.map((s) => _SettlementItem(settlement: s)),
+              ...bp.settlements.map((s) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _SettlementItemCard(settlement: s),
+                  )),
+
+            const SizedBox(height: 100),
           ],
         );
       }),
@@ -218,23 +99,60 @@ class _AccountScreenState extends State<AccountScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlR),
         title: const Text('确认结算'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              diff > 0
-                  ? '老婆 转给老公 ${Utils.formatMoney(diff)}'
-                  : '老公 转给老婆 ${Utils.formatMoney(-diff)}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                borderRadius: AppRadius.mdR,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    diff > 0 ? '👩' : '👨',
+                    style: const TextStyle(fontSize: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          diff > 0
+                              ? '老婆 需要转账给老公'
+                              : '老公 需要转账给老婆',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          Utils.formatMoney(diff.abs()),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: noteController,
+              maxLines: 2,
               decoration: const InputDecoration(
-                hintText: '备注（可选）',
-                border: OutlineInputBorder(),
+                hintText: '添加备注（可选）',
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Text('📝', style: const TextStyle(fontSize: 18)),
+                ),
               ),
             ),
           ],
@@ -257,9 +175,12 @@ class _AccountScreenState extends State<AccountScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6679EE),
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppRadius.mdR,
+              ),
             ),
-            child: const Text('确认', style: TextStyle(color: Colors.white)),
+            child: const Text('确认结算', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -267,51 +188,373 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 }
 
-class _SettlementItem extends StatelessWidget {
-  final Settlement settlement;
+class _SettlementCard extends StatelessWidget {
+  final double husbandExpense;
+  final double wifeExpense;
+  final double diff;
+  final VoidCallback? onSettle;
 
-  const _SettlementItem({required this.settlement});
+  const _SettlementCard({
+    required this.husbandExpense,
+    required this.wifeExpense,
+    required this.diff,
+    this.onSettle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isEven = diff.abs() < 0.01;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: AppRadius.xlR,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            '本月各自垫付',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textTertiary,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Two columns
+          Row(
+            children: [
+              Expanded(
+                child: _PersonExpenseColumn(
+                  emoji: '👨',
+                  name: '老公',
+                  amount: husbandExpense,
+                  color: const Color(0xFF6679EE),
+                  isLeading: diff > 0.01,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 60,
+                color: const Color(0xFFF0F0F0),
+              ),
+              Expanded(
+                child: _PersonExpenseColumn(
+                  emoji: '👩',
+                  name: '老婆',
+                  amount: wifeExpense,
+                  color: const Color(0xFFFF7F50),
+                  isLeading: diff < -0.01,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Status badge
+          if (isEven)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.income.withValues(alpha: 0.1),
+                borderRadius: AppRadius.fullR,
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('✅', style: TextStyle(fontSize: 16)),
+                  SizedBox(width: 8),
+                  Text(
+                    '已结清，互不相欠',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.income,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.expense.withValues(alpha: 0.08),
+                borderRadius: AppRadius.fullR,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(diff > 0 ? '👩' : '👨', style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Text(
+                    diff > 0
+                        ? '老婆欠老公 ${Utils.formatMoney(diff)}'
+                        : '老公欠老婆 ${Utils.formatMoney(-diff)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.expense,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          if (!isEven && onSettle != null) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: onSettle,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.mdR,
+                  ),
+                ),
+                child: const Text('发起结算 →'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PersonExpenseColumn extends StatelessWidget {
+  final String emoji;
+  final String name;
+  final double amount;
+  final Color color;
+  final bool isLeading;
+
+  const _PersonExpenseColumn({
+    required this.emoji,
+    required this.name,
+    required this.amount,
+    required this.color,
+    required this.isLeading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 6),
+            Text(
+              name,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          Utils.formatMoney(amount),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
+            letterSpacing: -0.5,
+          ),
+        ),
+        if (isLeading)
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: AppRadius.r(8),
+            ),
+            child: const Text(
+              '多垫',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.expense,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SettlementLogic extends StatelessWidget {
+  final double diff;
+
+  const _SettlementLogic({required this.diff});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.04),
+        borderRadius: AppRadius.lgR,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Text('💡', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '结算说明',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  diff > 0
+                      ? '本月老公垫付更多，差额为 ${Utils.formatMoney(diff)}，老婆应付给老公。'
+                      : '本月老婆垫付更多，差额为 ${Utils.formatMoney(-diff)}，老公应付给老婆。',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettlementItemCard extends StatelessWidget {
+  final Settlement settlement;
+
+  const _SettlementItemCard({required this.settlement});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdR,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: const Color(0xFF52C41A).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.income.withValues(alpha: 0.1),
+              borderRadius: AppRadius.mdR,
             ),
-            child: const Icon(Icons.check_circle, color: Color(0xFF52C41A), size: 22),
+            child: const Center(
+              child: Text('✅', style: TextStyle(fontSize: 22)),
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   Utils.formatMoney(settlement.amount),
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                if (settlement.note != null)
-                  Text(
-                    settlement.note!,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+                if (settlement.note != null && settlement.note!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      settlement.note!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
                   ),
               ],
             ),
           ),
           Text(
-            Utils.formatDate(settlement.date),
-            style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+            Utils.formatRelativeDate(settlement.date),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptySettlements extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.income.withValues(alpha: 0.08),
+              borderRadius: AppRadius.xlR,
+            ),
+            child: const Center(
+              child: Text('📜', style: TextStyle(fontSize: 36)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            '暂无结算记录',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '当双方有垫付差额时，可以发起结算',
+            style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
           ),
         ],
       ),
