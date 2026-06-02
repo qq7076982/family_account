@@ -38,15 +38,12 @@ jobs:
           flutter build apk --debug --android-skip-build-dependency-validation 2>&1 | tee /tmp/build.log || true
           echo "--- APK LOCATIONS ---"
           find . -name "*.apk" 2>/dev/null
-          echo "--- LAST 30 LINES ---"
-          tail -30 /tmp/build.log
         timeout-minutes: 20
 
       - name: Upload artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug.apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: android/app/build/outputs/flutter-apk/app-debug.apk
           retention-days: 7
         continue-on-error: true
